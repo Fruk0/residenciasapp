@@ -110,10 +110,35 @@ export default function TopicSelector() {
         <div className="flex flex-col gap-2">
           {areasFiltradas.map(({ area, total, pct }) => (
             <button
-              key={area}
-              onClick={() => navigate(`/practice/area/${encodeURIComponent(area)}`)}
-              className="w-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-3.5 flex items-center justify-between hover:border-gray-300 dark:hover:border-gray-600 transition-colors text-left"
-            >
+  key={area}
+  onClick={() => navigate(`/practice/area/${encodeURIComponent(area)}`)}
+  className="w-full bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-3.5 flex items-center justify-between hover:border-gray-300 dark:hover:border-gray-600 transition-colors text-left"
+>
+  <div className="flex-1 min-w-0 mr-4">
+    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+      {formatArea(area)}
+    </p>
+    <p className="text-xs text-gray-400 mt-0.5">
+      {total} preguntas
+    </p>
+  </div>
+  <div className="flex items-center gap-3 shrink-0">
+    {pct !== null && (
+      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+        pct >= 80
+          ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+          : pct >= 60
+          ? 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+          : 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+      }`}>
+        {pct}%
+      </span>
+    )}
+    <svg className="w-4 h-4 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
+    </svg>
+  </div>
+</button>
               <div className="flex-1 min-w-0 mr-4">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {formatArea(area)}
@@ -139,12 +164,7 @@ export default function TopicSelector() {
           )}
         </div>
 
-        <div className="flex gap-4 mt-5 px-1">
-          {[['bg-green-500', '≥ 80%'], ['bg-yellow-500', '60–79%'], ['bg-red-500', '< 60%'], ['bg-gray-200 dark:bg-gray-700', 'sin intentos']].map(([color, label]) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <div className={`w-2 h-2 rounded-full ${color}`} />
-              <span className="text-[10px] text-gray-400">{label}</span>
-            </div>
+
           ))}
         </div>
 
