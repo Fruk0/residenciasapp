@@ -27,7 +27,7 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (session === undefined) {
+  if (session === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
@@ -35,27 +35,23 @@ export default function App() {
     )
   }
 
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={session ? <Home session={session} /> : <Landing />} />
-        <Route path="/register" element={!session ? <Register /> : <Navigate to="/" />} />
-        <Route path="/practice" element={session ? <TopicSelector /> : <Navigate to="/login" />} />
-        <Route path="/practice/area/:area" element={session ? <SubtopicSelector /> : <Navigate to="/login" />} />
-        <Route path="/practice/area/:area/all" element={session ? <Practice modo="area" /> : <Navigate to="/login" />} />
-        <Route path="/practice/area/:area/subtema/:subtema" element={session ? <Practice modo="subtema" /> : <Navigate to="/login" />} />
-        <Route path="/simulacro" element={session ? <Simulacro /> : <Navigate to="/login" />} />
-        <Route path="/dashboard" element={session ? <Dashboard /> : <Navigate to="/login" />} />
-        <Route path="/profile" element={session ? <Profile /> : <Navigate to="/login" />} />
-        <Route path="/" element={session ? <Home session={session} /> : <Landing />} />
-        <Route path="/admin" element={
-  session
-    ? <ProtectedAdmin><Admin /></ProtectedAdmin>
-    : <Navigate to="/login" />
-} />
-      </Routes>
-    </BrowserRouter>
-  )
+return (
+  <BrowserRouter>
+    <Routes>
+      <Route path="/" element={session ? <Home session={session} /> : <Landing />} />
+      <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
+      <Route path="/register" element={!session ? <Register /> : <Navigate to="/" />} />
+      <Route path="/practice" element={session ? <TopicSelector /> : <Navigate to="/login" />} />
+      <Route path="/practice/area/:area" element={session ? <SubtopicSelector /> : <Navigate to="/login" />} />
+      <Route path="/practice/area/:area/all" element={session ? <Practice modo="area" /> : <Navigate to="/login" />} />
+      <Route path="/practice/area/:area/subtema/:subtema" element={session ? <Practice modo="subtema" /> : <Navigate to="/login" />} />
+      <Route path="/simulacro" element={session ? <Simulacro /> : <Navigate to="/login" />} />
+      <Route path="/dashboard" element={session ? <Dashboard /> : <Navigate to="/login" />} />
+      <Route path="/profile" element={session ? <Profile /> : <Navigate to="/login" />} />
+      <Route path="/admin" element={session ? <ProtectedAdmin><Admin /></ProtectedAdmin> : <Navigate to="/login" />} />
+    </Routes>
+  </BrowserRouter>
+)
 }
 
 function Home({ session }) {
