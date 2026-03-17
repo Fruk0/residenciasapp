@@ -92,12 +92,6 @@ export default function Login() {
           <div className="flex-1 h-px bg-gray-100" />
         </div>
 
-        <p className="text-center text-xs text-gray-400">
-          ¿No tenés cuenta?{' '}
-          <Link to="/register" className="text-black font-medium hover:underline underline-offset-4">
-            Registrate
-          </Link>
-        </p>
 
       </form>
     </AuthLayout>

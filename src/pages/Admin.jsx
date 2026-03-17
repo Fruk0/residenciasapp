@@ -94,7 +94,7 @@ export default function Admin() {
   const invitacionesUsadas = invitaciones.filter(i => i.usado_por)
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="min-h-screen bg-gray-50 px-4 py-8 text-base">
       <div className="max-w-lg mx-auto">
 
         <div className="flex items-center justify-between mb-6">
