@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import QuestionPlayer from '../components/QuestionPlayer'
 
-export default function Practice() {
+export default function Practice({ modo }) {
+  const { area, subtema } = useParams()
+  const areaDecoded = area ? decodeURIComponent(area) : null
+  const subtemaDecoded = subtema ? decodeURIComponent(subtema) : null
+
   const [preguntas, setPreguntas] = useState([])
   const [actual, setActual] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -14,22 +18,29 @@ export default function Practice() {
 
   useEffect(() => {
     cargarPreguntas()
-  }, [])
+  }, [area, subtema])
 
   const cargarPreguntas = async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    setError('')
+
+    let query = supabase
       .from('questions')
       .select('*')
       .eq('estado', 'activo')
-      .limit(10)
 
-    if (error) {
-      setError('No se pudieron cargar las preguntas.')
-    } else if (!data || data.length === 0) {
-      setError('No hay preguntas disponibles todavía.')
+    if (areaDecoded) query = query.eq('area', areaDecoded)
+    if (subtemaDecoded) query = query.eq('subtema', subtemaDecoded)
+
+    query = query.limit(1000)
+
+    const { data, error } = await query
+
+    if (error || !data || data.length === 0) {
+      setError('No hay preguntas disponibles para este filtro.')
     } else {
-      setPreguntas(data)
+      const mezcladas = data.sort(() => Math.random() - 0.5)
+      setPreguntas(mezcladas)
     }
     setLoading(false)
   }
@@ -41,7 +52,6 @@ export default function Practice() {
     await supabase.from('attempts').insert({
       user_id: user.id,
       question_id: preguntaActual.id,
-      respuesta_dada: null,
       es_correcta: esCorrecta,
       modo: 'practica'
     })
@@ -60,6 +70,14 @@ export default function Practice() {
     }
   }
 
+  const volverAtras = () => {
+    if (areaDecoded) {
+      navigate(`/practice/area/${area}`)
+    } else {
+      navigate('/practice')
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -73,11 +91,8 @@ export default function Practice() {
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
           <p className="text-sm text-gray-500 mb-4">{error}</p>
-          <button
-            onClick={() => navigate('/')}
-            className="text-sm text-black underline underline-offset-4"
-          >
-            Volver al inicio
+          <button onClick={volverAtras} className="text-sm text-black underline underline-offset-4">
+            Volver
           </button>
         </div>
       </div>
@@ -107,10 +122,10 @@ export default function Practice() {
               Otra ronda
             </button>
             <button
-              onClick={() => navigate('/')}
+              onClick={volverAtras}
               className="w-full text-sm text-gray-400 underline underline-offset-4 hover:text-black transition-colors"
             >
-              Volver al inicio
+              Volver
             </button>
           </div>
         </div>
@@ -122,13 +137,12 @@ export default function Practice() {
     <div className="min-h-screen bg-gray-50 px-4 py-8">
       <div className="max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => navigate('/')}
-            className="text-xs text-gray-400 hover:text-black transition-colors underline underline-offset-4"
-          >
+          <button onClick={volverAtras} className="text-xs text-gray-400 hover:text-black transition-colors underline underline-offset-4">
             Salir
           </button>
-          <span className="text-xs text-gray-400">Modo práctica</span>
+          <span className="text-xs text-gray-400">
+            {subtemaDecoded || areaDecoded || 'Práctica libre'}
+          </span>
         </div>
 
         <QuestionPlayer
