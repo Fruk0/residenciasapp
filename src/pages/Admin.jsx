@@ -79,10 +79,20 @@ export default function Admin() {
   }
 
   const toggleBloqueo = async (userId, estadoActual) => {
-    const nuevoEstado = estadoActual === 'activo' ? 'bloqueado' : 'activo'
-    await supabase.from('users').update({ estado_cuenta: nuevoEstado }).eq('id', userId)
-    await cargar()
-  }
+  const nuevoEstado = estadoActual === 'activo' ? 'bloqueado' : 'activo'
+  await supabase
+    .from('users')
+    .update({ estado_cuenta: nuevoEstado })
+    .eq('id', userId)
+  await cargar()
+}
+
+const eliminarUsuario = async (userId, email) => {
+  const confirmar = window.confirm(`¿Eliminar a ${email}? Esta acción no se puede deshacer.`)
+  if (!confirmar) return
+  await supabase.from('users').delete().eq('id', userId)
+  await cargar()
+}
 
   const formatFecha = (fechaStr) => {
     if (!fechaStr) return '—'
@@ -215,19 +225,27 @@ export default function Admin() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {user.role !== 'admin' && (
-                            <button
-                              onClick={() => toggleBloqueo(user.id, user.estado_cuenta)}
-                              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
-                                user.estado_cuenta === 'bloqueado'
-                                  ? 'border-green-200 text-green-700 hover:bg-green-50'
-                                  : 'border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-500'
-                              }`}
-                            >
-                              {user.estado_cuenta === 'bloqueado' ? 'Activar' : 'Bloquear'}
-                            </button>
-                          )}
-                        </td>
+  {user.role !== 'admin' && (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => toggleBloqueo(user.id, user.estado_cuenta)}
+        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
+          user.estado_cuenta === 'bloqueado'
+            ? 'border-green-200 text-green-700 hover:bg-green-50'
+            : 'border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-500'
+        }`}
+      >
+        {user.estado_cuenta === 'bloqueado' ? 'Activar' : 'Bloquear'}
+      </button>
+      <button
+        onClick={() => eliminarUsuario(user.id, user.email)}
+        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-500 transition-colors"
+      >
+        Eliminar
+      </button>
+    </div>
+  )}
+</td>
                       </tr>
                     )
                   })}
