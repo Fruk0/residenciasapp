@@ -1,16 +1,42 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import AuthLayout from '../components/AuthLayout'
 
 export default function Register() {
+  const [searchParams] = useSearchParams()
+  const inviteCode = searchParams.get('invite')
+
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [validandoInvite, setValidandoInvite] = useState(true)
+  const [inviteValido, setInviteValido] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    validarInvite()
+  }, [inviteCode])
+
+  const validarInvite = async () => {
+    if (!inviteCode) {
+      setInviteValido(false)
+      setValidandoInvite(false)
+      return
+    }
+
+    const { data } = await supabase
+      .from('invitations')
+      .select('id, activo, usado_por')
+      .eq('codigo', inviteCode)
+      .single()
+
+    setInviteValido(!!data && data.activo && !data.usado_por)
+    setValidandoInvite(false)
+  }
 
   const handleRegister = async (e) => {
     e.preventDefault()
@@ -23,20 +49,63 @@ export default function Register() {
       return
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { nombre }
-      }
+      options: { data: { nombre } }
     })
 
-    if (error) {
+    if (signUpError) {
       setError('Hubo un error al crear tu cuenta. Intentá de nuevo.')
       setLoading(false)
-    } else {
-      setSuccess(true)
+      return
     }
+
+    await supabase
+      .from('invitations')
+      .update({
+        activo: false,
+        usado_por: data.user.id,
+        usado_at: new Date().toISOString()
+      })
+      .eq('codigo', inviteCode)
+
+    setSuccess(true)
+    setLoading(false)
+  }
+
+  if (validandoInvite) {
+    return (
+      <AuthLayout>
+        <div className="flex items-center justify-center py-12">
+          <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+        </div>
+      </AuthLayout>
+    )
+  }
+
+  if (!inviteValido) {
+    return (
+      <AuthLayout>
+        <div className="text-center py-4">
+          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-medium text-gray-900 mb-2">Acceso por invitación.</h2>
+          <p className="text-sm text-gray-400 mb-8">
+            Esta app está en beta cerrada. Necesitás un link de invitación válido para registrarte.
+          </p>
+          <Link
+            to="/login"
+            className="text-sm text-black font-medium underline underline-offset-4 hover:text-gray-600 transition-colors"
+          >
+            Ir al login
+          </Link>
+        </div>
+      </AuthLayout>
+    )
   }
 
   if (success) {
@@ -50,7 +119,7 @@ export default function Register() {
           </div>
           <h2 className="text-xl font-medium text-black mb-2">Cuenta creada.</h2>
           <p className="text-sm text-gray-400 mb-8">
-            Te enviamos un email de confirmación a <span className="text-black">{email}</span>. Revisá tu bandeja de entrada.
+            Ya podés ingresar con tu email y contraseña.
           </p>
           <Link
             to="/login"
@@ -66,14 +135,12 @@ export default function Register() {
   return (
     <AuthLayout>
       <h1 className="text-2xl font-medium text-black mb-1">Empezá a prepararte.</h1>
-      <p className="text-sm text-gray-400 mb-8">Creá tu cuenta gratis en segundos.</p>
+      <p className="text-sm text-gray-400 mb-8">Creá tu cuenta con tu invitación.</p>
 
       <form onSubmit={handleRegister} className="flex flex-col gap-4">
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-gray-500 tracking-wide uppercase">
-            Nombre
-          </label>
+          <label className="text-xs font-medium text-gray-500 tracking-wide uppercase">Nombre</label>
           <input
             type="text"
             value={nombre}
@@ -85,9 +152,7 @@ export default function Register() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-gray-500 tracking-wide uppercase">
-            Email
-          </label>
+          <label className="text-xs font-medium text-gray-500 tracking-wide uppercase">Email</label>
           <input
             type="email"
             value={email}
@@ -99,9 +164,7 @@ export default function Register() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-gray-500 tracking-wide uppercase">
-            Contraseña
-          </label>
+          <label className="text-xs font-medium text-gray-500 tracking-wide uppercase">Contraseña</label>
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -134,12 +197,6 @@ export default function Register() {
         >
           {loading ? 'Creando cuenta...' : 'Crear cuenta'}
         </button>
-
-        <div className="flex items-center gap-3 my-1">
-          <div className="flex-1 h-px bg-gray-100" />
-          <span className="text-xs text-gray-300">o</span>
-          <div className="flex-1 h-px bg-gray-100" />
-        </div>
 
         <p className="text-center text-xs text-gray-400">
           ¿Ya tenés cuenta?{' '}
