@@ -159,7 +159,7 @@ export default function Home({ session }) {
 
   return (
     <div style={{ minHeight: '100vh', background: d.bg, transition: 'background 0.2s' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
@@ -192,7 +192,7 @@ export default function Home({ session }) {
         </div>
 
         {/* Métricas */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 16 }}>
           {[
             {
               label: 'Aciertos globales',
@@ -223,7 +223,7 @@ export default function Home({ session }) {
         </div>
 
         {/* Acciones + Especialidades */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 14 }}>
 
           <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20 }}>
             <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 16px' }}>Acciones rápidas</p>
@@ -317,7 +317,7 @@ export default function Home({ session }) {
         {stats?.sesiones?.length > 0 && (
           <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20 }}>
             <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 14px' }}>Últimas sesiones</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {stats.sesiones.map(({ fecha, modo, porcentaje, total }, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: d.card2, border: `1px solid ${d.border}`, borderRadius: 12 }}>
                   <div>
