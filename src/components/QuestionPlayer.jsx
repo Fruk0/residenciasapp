@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import DetailModal from './DetailModal'
-import { formatArea, formatSubtema } from '../lib/formatArea'
+import ReporteModal from './ReporteModal'
+import { formatArea } from '../lib/formatArea'
+import { useTheme } from '../hooks/useTheme'
 
 const LETRA = ['A', 'B', 'C', 'D']
 const OPCION_KEY = ['opcion_a', 'opcion_b', 'opcion_c', 'opcion_d']
@@ -11,26 +13,22 @@ const formatPregunta = (texto) => {
   const idx = texto.lastIndexOf('?')
   if (idx === -1) return { caso: null, pregunta: texto }
   const inicio = texto.lastIndexOf('.', idx)
-  if (inicio === -1 || inicio < texto.length * 0.5) {
-    return { caso: null, pregunta: texto }
+  if (inicio === -1 || inicio < texto.length * 0.5) return { caso: null, pregunta: texto }
+  return {
+    caso: texto.substring(0, inicio + 1).trim(),
+    pregunta: texto.substring(inicio + 1).trim()
   }
-  const caso = texto.substring(0, inicio + 1).trim()
-  const pregunta = texto.substring(inicio + 1).trim()
-  return { caso, pregunta }
 }
 
 export default function QuestionPlayer({
-  pregunta,
-  total,
-  actual,
-  onResponder,
-  onSiguiente,
-  mostrarArea = true,
-  modoExamen = false
+  pregunta, total, actual, onResponder, onSiguiente,
+  mostrarArea = true, modoExamen = false
 }) {
+  const { d, isDark } = useTheme()
   const [seleccionada, setSeleccionada] = useState(null)
   const [respondida, setRespondida] = useState(false)
   const [mostrarDetalle, setMostrarDetalle] = useState(false)
+  const [mostrarReporte, setMostrarReporte] = useState(false)
 
   const correctaIndex = LETRA.indexOf(pregunta.respuesta_correcta.toUpperCase())
   const progreso = Math.round((actual / total) * 100)
@@ -48,161 +46,148 @@ export default function QuestionPlayer({
     setSeleccionada(null)
     setRespondida(false)
     setMostrarDetalle(false)
+    setMostrarReporte(false)
     onSiguiente()
   }
 
-  const getOpcionStyle = (index) => {
-    if (!respondida) {
-      return 'border border-gray-200 hover:border-gray-400 cursor-pointer transition-colors'
-    }
-    if (modoExamen) {
-      if (index === seleccionada) return 'border border-gray-400 bg-gray-50 cursor-default'
-      return 'border border-gray-100 opacity-40 cursor-default'
-    }
-    if (index === correctaIndex) return 'border border-green-300 bg-green-50 cursor-default'
-    if (index === seleccionada && index !== correctaIndex) return 'border border-red-300 bg-red-50 cursor-default'
-    return 'border border-gray-100 opacity-40 cursor-default'
+  const progresoColor = progreso >= 80 ? '#22c55e' : progreso >= 50 ? '#eab308' : '#ef4444'
+
+  const getOpcionBg = (index) => {
+    if (!respondida) return d.card
+    if (modoExamen) return index === seleccionada ? d.card2 : d.card
+    if (index === correctaIndex) return isDark ? 'rgba(34,197,94,0.12)' : '#f0fdf4'
+    if (index === seleccionada && index !== correctaIndex) return isDark ? 'rgba(239,68,68,0.12)' : '#fff5f5'
+    return d.card
   }
 
-  const getLetraStyle = (index) => {
-    if (!respondida) return 'text-gray-400'
-    if (modoExamen) {
-      if (index === seleccionada) return 'text-gray-700'
-      return 'text-gray-400'
-    }
-    if (index === correctaIndex) return 'text-green-600'
-    if (index === seleccionada && index !== correctaIndex) return 'text-red-500'
-    return 'text-gray-400'
+  const getOpcionBorder = (index) => {
+    if (!respondida) return d.border2
+    if (modoExamen) return index === seleccionada ? d.border2 : d.border
+    if (index === correctaIndex) return isDark ? 'rgba(34,197,94,0.4)' : '#86efac'
+    if (index === seleccionada && index !== correctaIndex) return isDark ? 'rgba(239,68,68,0.4)' : '#fca5a5'
+    return d.border
   }
 
-  const getTextoStyle = (index) => {
-    if (!respondida) return 'text-gray-800'
-    if (modoExamen) {
-      if (index === seleccionada) return 'text-gray-800'
-      return 'text-gray-500'
-    }
-    if (index === correctaIndex) return 'text-green-700'
-    if (index === seleccionada && index !== correctaIndex) return 'text-red-600'
-    return 'text-gray-600'
+  const getOpcionOpacity = (index) => {
+    if (!respondida) return 1
+    if (modoExamen) return index === seleccionada ? 1 : 0.4
+    if (index === correctaIndex || index === seleccionada) return 1
+    return 0.35
+  }
+
+  const getLetraColor = (index) => {
+    if (!respondida) return d.text3
+    if (modoExamen) return index === seleccionada ? d.text2 : d.text3
+    if (index === correctaIndex) return isDark ? '#4ade80' : '#16a34a'
+    if (index === seleccionada && index !== correctaIndex) return isDark ? '#f87171' : '#dc2626'
+    return d.text3
+  }
+
+  const getTextoColor = (index) => {
+    if (!respondida) return d.text1
+    if (modoExamen) return index === seleccionada ? d.text1 : d.text2
+    if (index === correctaIndex) return isDark ? '#86efac' : '#15803d'
+    if (index === seleccionada && index !== correctaIndex) return isDark ? '#fca5a5' : '#b91c1c'
+    return d.text2
   }
 
   return (
     <>
-      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+      <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, overflow: 'hidden' }}>
 
-        {mostrarArea ? (
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs text-gray-400 truncate">{formatArea(pregunta.area)}</span>
-              {pregunta.subtema && (
-                <>
-                  <span className="text-xs text-gray-300">·</span>
-                  <span className="text-xs text-gray-400 truncate">{formatSubtema(pregunta.subtema)}</span>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2.5 shrink-0">
-              <span className="text-xs text-gray-400">{actual} / {total}</span>
-              <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-black rounded-full transition-all duration-300"
-                  style={{ width: `${progreso}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-end gap-2.5">
-            <span className="text-xs text-gray-400">{actual} / {total}</span>
-            <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-black rounded-full transition-all duration-300"
-                style={{ width: `${progreso}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="p-4">
-
-          {caso ? (
-            <>
-              <p className="text-xs text-gray-500 leading-relaxed mb-3">
-                {caso}
-              </p>
-              <p className="text-sm font-medium text-gray-900 leading-relaxed mb-5">
-                {pText}
-              </p>
-            </>
-          ) : (
-            <p className="text-sm font-medium text-gray-900 leading-relaxed mb-5">
-              {pText}
-            </p>
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${d.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          {mostrarArea && (
+            <span style={{ fontSize: 12, color: d.text3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {formatArea(pregunta.area)}
+            </span>
           )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginLeft: mostrarArea ? 0 : 'auto' }}>
+            <span style={{ fontSize: 12, color: d.text3 }}>{actual} / {total}</span>
+            <div style={{ width: 64, height: 4, background: d.track, borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${progreso}%`, background: progresoColor, borderRadius: 99, transition: 'width 0.5s' }} />
+            </div>
+          </div>
+        </div>
 
-          <div className="flex flex-col gap-2.5 mb-4">
+        <div style={{ padding: 20 }}>
+          {caso && (
+            <p style={{ fontSize: 13, color: d.text2, lineHeight: 1.7, marginBottom: 12, fontWeight: 400 }}>{caso}</p>
+          )}
+          <p style={{ fontSize: 14, fontWeight: 500, color: d.text1, lineHeight: 1.7, marginBottom: 20 }}>{pText}</p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
             {OPCION_KEY.map((key, index) => (
               <button
                 key={index}
                 onClick={() => handleSeleccionar(index)}
-                className={`w-full text-left rounded-xl px-3.5 py-3 flex gap-3 items-start ${getOpcionStyle(index)}`}
+                style={{
+                  width: '100%', textAlign: 'left', borderRadius: 12, padding: '12px 14px',
+                  display: 'flex', gap: 12, alignItems: 'flex-start',
+                  background: getOpcionBg(index), border: `1px solid ${getOpcionBorder(index)}`,
+                  opacity: getOpcionOpacity(index), cursor: respondida ? 'default' : 'pointer', transition: 'all 0.15s'
+                }}
               >
-                <span className={`text-xs font-semibold min-w-[16px] mt-0.5 ${getLetraStyle(index)}`}>
-                  {LETRA[index]}
-                </span>
-                <span className={`text-xs leading-relaxed ${getTextoStyle(index)}`}>
-                  {pregunta[key]}
-                </span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: getLetraColor(index), minWidth: 16, marginTop: 1, flexShrink: 0 }}>{LETRA[index]}</span>
+                <span style={{ fontSize: 13, lineHeight: 1.6, color: getTextoColor(index) }}>{pregunta[key]}</span>
               </button>
             ))}
           </div>
 
           {respondida && !modoExamen && (
-            <div className={`rounded-xl overflow-hidden mb-3 ${esCorrecta ? 'border border-green-200' : 'border border-red-200'}`}>
-              <div className={`px-3.5 py-3 ${esCorrecta ? 'bg-green-50' : 'bg-red-50'}`}>
-                <p className={`text-xs font-medium mb-1 ${esCorrecta ? 'text-green-700' : 'text-red-700'}`}>
+            <div style={{
+              borderRadius: 12, overflow: 'hidden', marginBottom: 12,
+              border: `1px solid ${esCorrecta ? (isDark ? 'rgba(34,197,94,0.3)' : '#86efac') : (isDark ? 'rgba(239,68,68,0.3)' : '#fca5a5')}`,
+              background: esCorrecta ? (isDark ? 'rgba(34,197,94,0.08)' : '#f0fdf4') : (isDark ? 'rgba(239,68,68,0.08)' : '#fff5f5')
+            }}>
+              <div style={{ padding: '12px 14px' }}>
+                <p style={{ fontSize: 12, fontWeight: 500, marginBottom: 6, color: esCorrecta ? (isDark ? '#4ade80' : '#15803d') : (isDark ? '#f87171' : '#b91c1c') }}>
                   {esCorrecta
-                    ? `${LETRA[correctaIndex]} — ${pregunta[OPCION_KEY[correctaIndex]]}`
-                    : `${LETRA[seleccionada]} — ${pregunta[OPCION_KEY[seleccionada]]}`
-                  }
+                    ? `✓ ${LETRA[correctaIndex]} — ${pregunta[OPCION_KEY[correctaIndex]]}`
+                    : `✗ ${LETRA[seleccionada]} — ${pregunta[OPCION_KEY[seleccionada]]}`}
                 </p>
-                <p className={`text-xs leading-relaxed ${esCorrecta ? 'text-green-600' : 'text-red-600'}`}>
-                  {esCorrecta
-                    ? pregunta[EXPLICACION_KEY[correctaIndex]]
-                    : pregunta[EXPLICACION_KEY[seleccionada]]
-                  }
+                <p style={{ fontSize: 12, lineHeight: 1.6, color: esCorrecta ? (isDark ? '#86efac' : '#166534') : (isDark ? '#fca5a5' : '#991b1b') }}>
+                  {esCorrecta ? pregunta[EXPLICACION_KEY[correctaIndex]] : pregunta[EXPLICACION_KEY[seleccionada]]}
                 </p>
               </div>
             </div>
           )}
 
-          {respondida && !modoExamen && pregunta.detalle_extendido && (
-            <button
-              onClick={() => setMostrarDetalle(true)}
-              className="w-full text-xs text-gray-400 underline underline-offset-4 hover:text-black transition-colors py-1 mb-2"
-            >
-              Ver detalle extendido
-            </button>
+          {respondida && !modoExamen && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              {pregunta.detalle_extendido ? (
+                <button
+                  onClick={() => setMostrarDetalle(true)}
+                  style={{ fontSize: 12, color: d.text3, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, padding: 0 }}
+                >
+                  Ver detalle extendido
+                </button>
+              ) : <span />}
+              <button
+                onClick={() => setMostrarReporte(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                  <line x1="4" y1="22" x2="4" y2="15"/>
+                </svg>
+                Reportar
+              </button>
+            </div>
           )}
 
           {respondida && (
             <button
               onClick={handleSiguiente}
-              className="w-full bg-black text-white rounded-xl py-3 text-sm font-medium hover:bg-gray-800 transition-colors"
+              style={{ width: '100%', background: d.btnBg, color: d.btnText, border: 'none', borderRadius: 12, padding: '12px 0', fontSize: 13, letterSpacing: '0.02em', cursor: 'pointer' }}
             >
-              {modoExamen ? 'Siguiente' : 'Siguiente pregunta'}
+              {modoExamen ? 'Siguiente' : 'Continuar'}
             </button>
           )}
-
         </div>
       </div>
 
-      {mostrarDetalle && (
-        <DetailModal
-          pregunta={pregunta}
-          onCerrar={() => setMostrarDetalle(false)}
-        />
-      )}
+      {mostrarDetalle && <DetailModal pregunta={pregunta} onCerrar={() => setMostrarDetalle(false)} />}
+      {mostrarReporte && <ReporteModal pregunta={pregunta} onCerrar={() => setMostrarReporte(false)} />}
     </>
   )
 }

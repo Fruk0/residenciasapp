@@ -2,329 +2,179 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { formatArea } from '../lib/formatArea'
+import { useTheme } from '../hooks/useTheme'
+import DarkModeToggle from '../components/DarkModeToggle'
 
 export default function Dashboard() {
+  const { d } = useTheme()
   const [perfil, setPerfil] = useState(null)
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
-  useEffect(() => {
-    cargar()
-  }, [])
+  useEffect(() => { cargar() }, [])
 
   const cargar = async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
-
-    const { data: userData } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    const { data: intentos } = await supabase
-      .from('attempts')
-      .select('question_id, es_correcta, modo, timestamp')
-      .eq('user_id', user.id)
-      .order('timestamp', { ascending: false })
-      .limit(5000)
-
-    const { data: preguntas } = await supabase
-      .from('questions')
-      .select('id, area')
-      .eq('estado', 'activo')
-      .limit(1000)
-
+    const { data: userData } = await supabase.from('users').select('*').eq('id', user.id).single()
+    const { data: intentos } = await supabase.from('attempts').select('question_id, es_correcta, modo, timestamp').eq('user_id', user.id).order('timestamp', { ascending: false }).limit(5000)
+    const { data: preguntas } = await supabase.from('questions').select('id, area').eq('estado', 'activo').limit(1000)
     setPerfil(userData)
-
     if (intentos && preguntas) {
       const areasPorId = {}
       preguntas.forEach(({ id, area }) => { areasPorId[id] = area })
-
       const total = intentos.length
       const correctasTotal = intentos.filter(i => i.es_correcta).length
       const pctGlobal = total > 0 ? Math.round((correctasTotal / total) * 100) : null
-
       const porArea = {}
       intentos.forEach(({ question_id, es_correcta }) => {
-        const area = areasPorId[question_id]
-        if (!area) return
+        const area = areasPorId[question_id]; if (!area) return
         if (!porArea[area]) porArea[area] = { correctas: 0, total: 0 }
-        porArea[area].total++
-        if (es_correcta) porArea[area].correctas++
+        porArea[area].total++; if (es_correcta) porArea[area].correctas++
       })
-
       const hoy = new Date()
-      const hace7dias = new Date(hoy)
-      hace7dias.setDate(hoy.getDate() - 7)
-      const hace14dias = new Date(hoy)
-      hace14dias.setDate(hoy.getDate() - 14)
-
-      const intentosSemana = intentos.filter(i => new Date(i.timestamp) >= hace7dias)
-      const intentosSemanaAnterior = intentos.filter(i => {
-        const t = new Date(i.timestamp)
-        return t >= hace14dias && t < hace7dias
+      const hace7 = new Date(hoy); hace7.setDate(hoy.getDate()-7)
+      const hace14 = new Date(hoy); hace14.setDate(hoy.getDate()-14)
+      const sem = intentos.filter(i => new Date(i.timestamp) >= hace7)
+      const semAnt = intentos.filter(i => { const t=new Date(i.timestamp); return t>=hace14 && t<hace7 })
+      const pctSem = sem.length > 0 ? Math.round((sem.filter(i=>i.es_correcta).length/sem.length)*100) : null
+      const pctSemAnt = semAnt.length > 0 ? Math.round((semAnt.filter(i=>i.es_correcta).length/semAnt.length)*100) : null
+      const comparativa = pctSem!==null && pctSemAnt!==null ? pctSem-pctSemAnt : null
+      const dias = [...new Set(intentos.map(i=>i.timestamp.split('T')[0]))].sort().reverse()
+      let racha = 0
+      const todayStr = new Date().toISOString().split('T')[0]
+      const ayerStr = new Date(Date.now()-86400000).toISOString().split('T')[0]
+      if (dias[0]===todayStr||dias[0]===ayerStr) { racha=1; for(let i=1;i<dias.length;i++){const diff=(new Date(dias[i-1])-new Date(dias[i]))/86400000; if(diff===1)racha++; else break} }
+      const grupos = {}
+      intentos.forEach(({ timestamp, es_correcta, modo }) => {
+        const key = `${timestamp.split('T')[0]}_${modo}`
+        if (!grupos[key]) grupos[key] = { fecha: timestamp, modo, correctas: 0, total: 0 }
+        grupos[key].total++; if (es_correcta) grupos[key].correctas++
       })
-
-      const pctSemana = intentosSemana.length > 0
-        ? Math.round((intentosSemana.filter(i => i.es_correcta).length / intentosSemana.length) * 100)
-        : null
-      const pctSemanaAnterior = intentosSemanaAnterior.length > 0
-        ? Math.round((intentosSemanaAnterior.filter(i => i.es_correcta).length / intentosSemanaAnterior.length) * 100)
-        : null
-
-      const comparativa = pctSemana !== null && pctSemanaAnterior !== null
-        ? pctSemana - pctSemanaAnterior
-        : null
-
-      const racha = calcularRacha(intentos)
-
-      const sesiones = agruparSesiones(intentos).slice(0, 5)
-
-      setStats({
-        pctGlobal,
-        total,
-        correctasTotal,
-        porArea,
-        comparativa,
-        racha,
-        sesiones,
-        meta: userData?.meta_aciertos || 80
-      })
+      const sesiones = Object.values(grupos).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(({fecha,modo,correctas,total})=>({fecha,modo,porcentaje:Math.round((correctas/total)*100),total})).slice(0,5)
+      setStats({ pctGlobal, total, correctasTotal, porArea, comparativa, racha, sesiones, meta: userData?.meta_aciertos||80 })
     }
-
     setLoading(false)
   }
 
-  const calcularRacha = (intentos) => {
-    if (!intentos.length) return 0
-    const dias = [...new Set(intentos.map(i => i.timestamp.split('T')[0]))].sort().reverse()
+  const getColor = (pct, meta) => pct >= meta ? '#22c55e' : pct >= meta*0.75 ? '#eab308' : '#ef4444'
+
+  const formatFecha = (fechaStr) => {
     const hoy = new Date().toISOString().split('T')[0]
-    const ayer = new Date(Date.now() - 86400000).toISOString().split('T')[0]
-    if (dias[0] !== hoy && dias[0] !== ayer) return 0
-    let racha = 1
-    for (let i = 1; i < dias.length; i++) {
-      const prev = new Date(dias[i - 1])
-      const curr = new Date(dias[i])
-      const diff = (prev - curr) / (1000 * 60 * 60 * 24)
-      if (diff === 1) racha++
-      else break
-    }
-    return racha
-  }
-
-  const agruparSesiones = (intentos) => {
-    const grupos = {}
-    intentos.forEach(({ timestamp, es_correcta, modo }) => {
-      const key = `${timestamp.split('T')[0]}_${modo}`
-      if (!grupos[key]) grupos[key] = { fecha: timestamp, modo, correctas: 0, total: 0 }
-      grupos[key].total++
-      if (es_correcta) grupos[key].correctas++
-    })
-    return Object.values(grupos)
-      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-      .map(({ fecha, modo, correctas, total }) => ({
-        fecha,
-        modo,
-        porcentaje: Math.round((correctas / total) * 100),
-        total
-      }))
-  }
-
-  const diasParaExamen = () => {
-    if (!perfil?.fecha_examen) return null
-    const diff = Math.ceil((new Date(perfil.fecha_examen) - new Date()) / (1000 * 60 * 60 * 24))
-    return diff > 0 ? diff : null
-  }
-
-  const formatFechaSesion = (fechaStr) => {
-    const hoy = new Date().toISOString().split('T')[0]
-    const ayer = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+    const ayer = new Date(Date.now()-86400000).toISOString().split('T')[0]
     const dia = fechaStr.split('T')[0]
-    if (dia === hoy) return `Hoy, ${fechaStr.split('T')[1]?.slice(0, 5)}`
-    if (dia === ayer) return `Ayer, ${fechaStr.split('T')[1]?.slice(0, 5)}`
+    if (dia===hoy) return `Hoy, ${fechaStr.split('T')[1]?.slice(0,5)}`
+    if (dia===ayer) return `Ayer, ${fechaStr.split('T')[1]?.slice(0,5)}`
     return dia.split('-').reverse().join('/')
   }
 
-  const getColorPct = (pct, meta) => {
-    if (pct >= meta) return 'text-green-600'
-    if (pct >= meta * 0.75) return 'text-yellow-600'
-    return 'text-red-500'
+  const diasExamen = () => {
+    if (!perfil?.fecha_examen) return null
+    const diff = Math.ceil((new Date(perfil.fecha_examen)-new Date())/86400000)
+    return diff > 0 ? diff : null
   }
 
-  const getBarColor = (pct, meta) => {
-    if (pct >= meta) return 'bg-green-500'
-    if (pct >= meta * 0.75) return 'bg-yellow-500'
-    return 'bg-red-500'
-  }
+  if (loading) return (
+    <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:d.bg}}>
+      <div style={{width:24,height:24,border:`2px solid ${d.text1}`,borderTopColor:'transparent',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
+    </div>
+  )
 
-  const iniciales = (nombre) => {
-    if (!nombre) return '?'
-    return nombre.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  const dias = diasParaExamen()
+  const dias = diasExamen()
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-lg mx-auto">
+    <div style={{minHeight:'100vh', background:d.bg, padding:'32px 16px', transition:'background 0.2s'}}>
+      <div style={{maxWidth:560, margin:'0 auto'}}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24}}>
           <div>
-            <h1 className="text-2xl font-medium text-gray-900">
-              Hola, {perfil?.nombre?.split(' ')[0] || 'ahí'}.
-            </h1>
-            {dias && (
-              <p className="text-xs text-gray-400 mt-0.5">Examen en {dias} días</p>
-            )}
+            <h1 style={{fontSize:22, fontWeight:500, color:d.text1, margin:'0 0 4px'}}>Mi progreso.</h1>
+            {dias && <p style={{fontSize:12, color:d.text3, margin:0}}>Examen en {dias} días</p>}
           </div>
-          <button
-            onClick={() => navigate('/profile')}
-            className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center hover:border-gray-400 transition-colors"
-          >
-            <span className="text-sm font-medium text-gray-600">{iniciales(perfil?.nombre)}</span>
-          </button>
+          <div style={{display:'flex', gap:8}}>
+            <DarkModeToggle />
+            <button onClick={() => navigate('/')} style={{fontSize:12, color:d.text3, border:`1px solid ${d.border2}`, borderRadius:10, padding:'6px 14px', background:'transparent', cursor:'pointer'}}>Inicio</button>
+          </div>
         </div>
 
-        {/* Score global */}
-        {stats?.pctGlobal !== null ? (
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-4">
-            <div className="flex items-center justify-between">
+        {stats?.pctGlobal !== null && stats?.pctGlobal !== undefined ? (
+          <div style={{background:d.card, border:`1px solid ${d.border}`, borderRadius:18, padding:20, marginBottom:16}}>
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Aciertos globales</p>
-                <p className={`text-5xl font-medium ${getColorPct(stats.pctGlobal, stats.meta)}`}>
-                  {stats.pctGlobal}%
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  meta: {stats.meta}% · {stats.total} respondidas
-                </p>
+                <p style={{fontSize:11, color:d.text3, textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 8px'}}>Aciertos globales</p>
+                <p style={{fontSize:52, fontWeight:500, color:getColor(stats.pctGlobal,stats.meta), margin:'0 0 4px'}}>{stats.pctGlobal}%</p>
+                <p style={{fontSize:11, color:d.text3, margin:0}}>meta: {stats.meta}% · {stats.total} respondidas</p>
               </div>
-              <div className="relative w-16 h-16">
-                <svg viewBox="0 0 64 64" className="w-16 h-16 -rotate-90">
-                  <circle cx="32" cy="32" r="26" fill="none" stroke="#f3f4f6" strokeWidth="5" />
-                  <circle
-                    cx="32" cy="32" r="26" fill="none"
-                    stroke={stats.pctGlobal >= stats.meta ? '#16a34a' : stats.pctGlobal >= stats.meta * 0.75 ? '#ca8a04' : '#ef4444'}
-                    strokeWidth="5"
-                    strokeDasharray={`${2 * Math.PI * 26}`}
-                    strokeDashoffset={`${2 * Math.PI * 26 * (1 - stats.pctGlobal / 100)}`}
-                    strokeLinecap="round"
-                  />
+              <div style={{position:'relative', width:64, height:64}}>
+                <svg viewBox="0 0 64 64" style={{width:64, height:64, transform:'rotate(-90deg)'}}>
+                  <circle cx="32" cy="32" r="26" fill="none" stroke={d.track} strokeWidth="5"/>
+                  <circle cx="32" cy="32" r="26" fill="none" stroke={getColor(stats.pctGlobal,stats.meta)} strokeWidth="5"
+                    strokeDasharray={`${2*Math.PI*26}`} strokeDashoffset={`${2*Math.PI*26*(1-stats.pctGlobal/100)}`} strokeLinecap="round"/>
                 </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-medium text-gray-700">{stats.pctGlobal}%</span>
+                <div style={{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                  <span style={{fontSize:11, fontWeight:500, color:d.text1}}>{stats.pctGlobal}%</span>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-4 text-center">
-            <p className="text-sm text-gray-400">Todavía no respondiste ninguna pregunta.</p>
-            <button
-              onClick={() => navigate('/practice')}
-              className="text-sm text-black font-medium underline underline-offset-4 mt-2"
-            >
-              Empezar a practicar
-            </button>
+          <div style={{background:d.card, border:`1px solid ${d.border}`, borderRadius:18, padding:20, marginBottom:16, textAlign:'center'}}>
+            <p style={{fontSize:13, color:d.text3, marginBottom:12}}>Todavía no respondiste ninguna pregunta.</p>
+            <button onClick={() => navigate('/practice')} style={{fontSize:13, color:d.text1, background:'none', border:'none', cursor:'pointer', textDecoration:'underline'}}>Empezar a practicar</button>
           </div>
         )}
 
-        {/* Stats rápidas */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-white border border-gray-100 rounded-xl p-3.5 text-center">
-            <p className="text-xl font-medium text-gray-900">{stats?.total || 0}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">respondidas</p>
-          </div>
-          <div className="bg-white border border-gray-100 rounded-xl p-3.5 text-center">
-            <p className={`text-xl font-medium ${stats?.racha > 0 ? 'text-green-600' : 'text-gray-900'}`}>
-              {stats?.racha || 0}
-            </p>
-            <p className="text-[10px] text-gray-400 mt-0.5">días racha</p>
-          </div>
-          <div className="bg-white border border-gray-100 rounded-xl p-3.5 text-center">
-            <p className={`text-xl font-medium ${
-              stats?.comparativa === null ? 'text-gray-900' :
-              stats.comparativa > 0 ? 'text-green-600' :
-              stats.comparativa < 0 ? 'text-red-500' : 'text-gray-900'
-            }`}>
-              {stats?.comparativa === null ? '—' :
-               stats.comparativa > 0 ? `+${stats.comparativa}%` :
-               stats.comparativa === 0 ? '=' : `${stats.comparativa}%`}
-            </p>
-            <p className="text-[10px] text-gray-400 mt-0.5">vs sem. ant.</p>
-          </div>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:16}}>
+          {[
+            {label:'respondidas', value:stats?.total||0, color:d.text1},
+            {label:'días racha', value:stats?.racha||0, color:stats?.racha>0?'#22c55e':d.text1},
+            {label:'vs sem. ant.', value:stats?.comparativa==null?'—':stats.comparativa>0?`+${stats.comparativa}%`:stats.comparativa===0?'=': `${stats.comparativa}%`, color:stats?.comparativa>0?'#22c55e':stats?.comparativa<0?'#ef4444':d.text1}
+          ].map(({label,value,color})=>(
+            <div key={label} style={{background:d.card, border:`1px solid ${d.border}`, borderRadius:14, padding:'14px 10px', textAlign:'center'}}>
+              <p style={{fontSize:22, fontWeight:500, color, margin:'0 0 4px'}}>{value}</p>
+              <p style={{fontSize:10, color:d.text3, margin:0}}>{label}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Por especialidad */}
         {stats?.porArea && Object.keys(stats.porArea).length > 0 && (
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-4">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-4">Por especialidad</p>
-            <div className="flex flex-col gap-3">
-              {Object.entries(stats.porArea)
-                .map(([area, { correctas, total }]) => ({
-                  area,
-                  pct: Math.round((correctas / total) * 100),
-                  total
-                }))
-                .sort((a, b) => b.pct - a.pct)
-                .map(({ area, pct, total }) => (
-                  <div key={area}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-gray-700">{formatArea(area)}</span>
-                      <span className="text-xs font-medium text-gray-900">{pct}%</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${getBarColor(pct, stats.meta)}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+          <div style={{background:d.card, border:`1px solid ${d.border}`, borderRadius:18, padding:20, marginBottom:16}}>
+            <p style={{fontSize:11, fontWeight:500, textTransform:'uppercase', letterSpacing:'0.1em', color:d.text3, margin:'0 0 16px'}}>Por especialidad</p>
+            <div style={{display:'flex', flexDirection:'column', gap:12}}>
+              {Object.entries(stats.porArea).map(([area,{correctas,total}])=>({area,pct:Math.round((correctas/total)*100)})).sort((a,b)=>b.pct-a.pct).map(({area,pct})=>(
+                <div key={area}>
+                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:5}}>
+                    <span style={{fontSize:12, color:d.text2}}>{formatArea(area)}</span>
+                    <span style={{fontSize:12, fontWeight:500, color:getColor(pct,stats.meta)}}>{pct}%</span>
                   </div>
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* Últimas sesiones */}
-        {stats?.sesiones?.length > 0 && (
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-4">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Últimas sesiones</p>
-            <div className="flex flex-col gap-2">
-              {stats.sesiones.map(({ fecha, modo, porcentaje, total }, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div>
-                    <p className="text-xs font-medium text-gray-900 capitalize">
-                      {modo === 'simulacro' ? 'Simulacro' : 'Práctica'} · {total} preguntas
-                    </p>
-                    <p className="text-xs text-gray-400">{formatFechaSesion(fecha)}</p>
+                  <div style={{height:4, background:d.track, borderRadius:99, overflow:'hidden'}}>
+                    <div style={{height:'100%', width:`${pct}%`, background:getColor(pct,stats.meta), borderRadius:99, transition:'width 0.5s'}}/>
                   </div>
-                  <span className={`text-sm font-medium ${getColorPct(porcentaje, stats.meta)}`}>
-                    {porcentaje}%
-                  </span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Botón volver */}
-        <button
-          onClick={() => navigate('/')}
-          className="w-full text-sm text-gray-400 underline underline-offset-4 hover:text-black transition-colors py-4"
-        >
-          Volver al inicio
-        </button>
+        {stats?.sesiones?.length > 0 && (
+          <div style={{background:d.card, border:`1px solid ${d.border}`, borderRadius:18, padding:20, marginBottom:16}}>
+            <p style={{fontSize:11, fontWeight:500, textTransform:'uppercase', letterSpacing:'0.1em', color:d.text3, margin:'0 0 12px'}}>Últimas sesiones</p>
+            <div style={{display:'flex', flexDirection:'column', gap:8}}>
+              {stats.sesiones.map(({fecha,modo,porcentaje,total},i)=>(
+                <div key={i} style={{display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:`1px solid ${d.border}` }}>
+                  <div>
+                    <p style={{fontSize:12, fontWeight:500, color:d.text1, margin:'0 0 2px'}}>{modo==='simulacro'?'Simulacro':'Práctica'} · {total} preguntas</p>
+                    <p style={{fontSize:11, color:d.text3, margin:0}}>{formatFecha(fecha)}</p>
+                  </div>
+                  <span style={{fontSize:14, fontWeight:500, color:getColor(porcentaje,stats.meta)}}>{porcentaje}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
+        <button onClick={() => navigate('/')} style={{width:'100%', fontSize:12, color:d.text3, background:'none', border:'none', cursor:'pointer', textDecoration:'underline', padding:'16px 0'}}>Volver al inicio</button>
       </div>
     </div>
   )

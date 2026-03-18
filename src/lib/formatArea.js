@@ -1,4 +1,5 @@
-const NOMBRES_AREAS = {
+const NOMBRES = {
+  // areas
   cardiologia: 'Cardiología',
   clinica_medica: 'Clínica médica',
   ginecologia: 'Ginecología',
@@ -18,6 +19,7 @@ const NOMBRES_AREAS = {
   endocrinologia: 'Endocrinología',
   nefrologia: 'Nefrología',
   hematologia: 'Hematología',
+  hematologia_adulto: 'Hematología',
   oncologia: 'Oncología',
   reumatologia: 'Reumatología',
   oftalmologia: 'Oftalmología',
@@ -26,29 +28,39 @@ const NOMBRES_AREAS = {
   urologia: 'Urología',
   medicina_familiar: 'Medicina familiar',
   emergentologia: 'Emergentología',
-}
-
-const NOMBRES_SUBTEMAS = {
+  // subtemas
   cancer_cuello_uterino: 'Cáncer de cuello uterino',
   cancer_mama: 'Cáncer de mama',
   anticoncepcion: 'Anticoncepción',
   embarazo_normal: 'Embarazo normal',
   embarazo_patologico: 'Embarazo patológico',
   parto_normal: 'Parto normal',
+  parto_prematuro_rpm: 'Parto prematuro y RPM',
   puerperio: 'Puerperio',
   infecciones_ginecologicas: 'Infecciones ginecológicas',
   patologia_mamaria: 'Patología mamaria',
   endometriosis: 'Endometriosis',
   miomatosis: 'Miomatosis',
+  preeclampsia: 'Preeclampsia',
+  control_prenatal: 'Control prenatal',
   desarrollo_psicomotor: 'Desarrollo psicomotor',
   nutricion_infantil: 'Nutrición infantil',
   vacunas_calendario: 'Vacunas — calendario nacional',
+  calendario_pediatrico: 'Calendario pediátrico',
+  vacunas_adulto: 'Vacunas adulto',
   infecciones_respiratorias: 'Infecciones respiratorias',
+  neumonia_pediatrica: 'Neumonía pediátrica',
   diarrea_aguda: 'Diarrea aguda',
   maltrato_infantil: 'Maltrato infantil',
   recien_nacido: 'Recién nacido',
   maduracion_neurologica: 'Maduración neurológica',
   cardiopatias_congenitas: 'Cardiopatías congénitas',
+  lactancia: 'Lactancia',
+  orl_pediatrica: 'ORL pediátrica',
+  ORL_pediatrica: 'ORL pediátrica',
+  exantematicas: 'Enfermedades exantemáticas',
+  'exantemáticas': 'Enfermedades exantemáticas',
+  vih_sida: 'VIH / SIDA',
   hiv_sida: 'VIH / SIDA',
   tuberculosis: 'Tuberculosis',
   hepatitis: 'Hepatitis',
@@ -59,18 +71,24 @@ const NOMBRES_SUBTEMAS = {
   insuficiencia_cardiaca: 'Insuficiencia cardíaca',
   hipertension: 'Hipertensión arterial',
   sindrome_coronario: 'Síndrome coronario agudo',
+  sindromes_coronarios: 'Síndromes coronarios',
   arritmias: 'Arritmias',
   valvulopatias: 'Valvulopatías',
   diabetes: 'Diabetes',
   hipotiroidismo: 'Hipotiroidismo',
   hipertiroidismo: 'Hipertiroidismo',
   obesidad: 'Obesidad',
+  trastornos_ionicos: 'Trastornos iónicos',
   epoc: 'EPOC',
   asma: 'Asma',
   neumonia: 'Neumonía',
   insuficiencia_renal: 'Insuficiencia renal',
+  insuficiencia_renal_aguda: 'Insuficiencia renal aguda',
+  enfermedad_renal_cronica: 'Enfermedad renal crónica',
   litiasis_renal: 'Litiasis renal',
   anemia: 'Anemia',
+  anemia_ferropenica: 'Anemia ferropénica',
+  anemia_megaloblastica: 'Anemia megaloblástica',
   leucemia: 'Leucemia',
   linfoma: 'Linfoma',
   apendicitis: 'Apendicitis',
@@ -84,6 +102,7 @@ const NOMBRES_SUBTEMAS = {
   esquizofrenia: 'Esquizofrenia',
   trastorno_bipolar: 'Trastorno bipolar',
   ansiedad: 'Ansiedad',
+  salud_mental: 'Salud mental',
   responsabilidad_medica: 'Responsabilidad médica',
   consentimiento_informado: 'Consentimiento informado',
   certificacion_defuncion: 'Certificación de defunción',
@@ -92,21 +111,14 @@ const NOMBRES_SUBTEMAS = {
   prevencion: 'Prevención',
 }
 
-export function formatArea(area) {
-  if (!area) return ''
-  const key = area.toLowerCase().trim()
-  return NOMBRES_AREAS[key] ||
-    NOMBRES_SUBTEMAS[key] ||
-    area
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase())
+export function formatArea(val) {
+  if (!val) return ''
+  const key = val.trim()
+  return NOMBRES[key] ||
+    NOMBRES[key.toLowerCase()] ||
+    key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 
-export function formatSubtema(subtema) {
-  if (!subtema) return ''
-  const key = subtema.toLowerCase().trim()
-  return NOMBRES_SUBTEMAS[key] ||
-    subtema
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase())
+export function formatSubtema(val) {
+  return formatArea(val)
 }

@@ -1,331 +1,303 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useTheme } from '../hooks/useTheme'
+import DarkModeToggle from '../components/DarkModeToggle'
 
 function generarCodigo() {
   return Math.random().toString(36).substring(2, 10).toUpperCase()
 }
 
+function UserCard({ user, reportesCount, d, onToggleBloqueo, onEliminar, onToggleAdmin }) {
+  const [expandido, setExpandido] = useState(false)
+  const pct = user.stats.total ? Math.round((user.stats.correctas / user.stats.total) * 100) : null
+  const getColor = (p) => p === null ? d.text3 : p >= 80 ? '#22c55e' : p >= 60 ? '#eab308' : '#ef4444'
+  const formatFecha = (s) => s ? new Date(s).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'
+
+  return (
+    <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 16, overflow: 'hidden' }}>
+      <button
+        onClick={() => setExpandido(p => !p)}
+        style={{ width: '100%', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: d.card2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: d.text2 }}>{(user.nombre || user.email || '?')[0].toUpperCase()}</span>
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user.nombre || user.email?.split('@')[0] || 'Sin nombre'}
+            </p>
+            <p style={{ fontSize: 11, color: d.text3, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 12 }}>
+          {user.role === 'admin' && <span style={{ fontSize: 10, background: d.btnBg, color: d.btnText, borderRadius: 4, padding: '2px 6px' }}>admin</span>}
+          <span style={{ fontSize: 10, background: user.estado_cuenta === 'bloqueado' ? '#fee2e2' : '#dcfce7', color: user.estado_cuenta === 'bloqueado' ? '#dc2626' : '#15803d', borderRadius: 4, padding: '2px 6px' }}>{user.estado_cuenta || 'activo'}</span>
+          {pct !== null && <span style={{ fontSize: 12, fontWeight: 500, color: getColor(pct) }}>{pct}%</span>}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={d.text3} strokeWidth="2" style={{ transform: expandido ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6"/>
+          </svg>
+        </div>
+      </button>
+
+      {expandido && (
+        <div style={{ borderTop: `1px solid ${d.border}`, padding: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 14 }}>
+            {[
+              { label: 'Meta', value: `${user.meta_aciertos || 80}%`, color: d.text1 },
+              { label: 'Preguntas', value: user.stats.total, color: d.text1 },
+              { label: 'Aciertos', value: pct !== null ? `${pct}%` : '—', color: getColor(pct) },
+              { label: 'Reportes', value: reportesCount, color: reportesCount > 0 ? '#7c3aed' : d.text1 },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ background: d.card2, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                <p style={{ fontSize: 10, color: d.text3, margin: '0 0 4px' }}>{label}</p>
+                <p style={{ fontSize: 18, fontWeight: 500, color, margin: 0 }}>{value}</p>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: d.text3, margin: '0 0 14px' }}>Registro: {formatFecha(user.created_at)} · Correctas: {user.stats.correctas}</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => onToggleAdmin(user.id, user.role)}
+              style={{ fontSize: 12, padding: '7px 14px', borderRadius: 9, border: `1px solid ${user.role === 'admin' ? '#fca5a5' : 'rgba(167,139,250,0.4)'}`, background: user.role === 'admin' ? '#fff5f5' : 'rgba(167,139,250,0.08)', color: user.role === 'admin' ? '#dc2626' : '#7c3aed', cursor: 'pointer' }}
+            >
+              {user.role === 'admin' ? 'Quitar admin' : 'Dar admin'}
+            </button>
+            <button
+              onClick={() => onToggleBloqueo(user.id, user.estado_cuenta)}
+              style={{ fontSize: 12, padding: '7px 14px', borderRadius: 9, border: `1px solid ${user.estado_cuenta === 'bloqueado' ? '#86efac' : '#fca5a5'}`, background: user.estado_cuenta === 'bloqueado' ? '#f0fdf4' : '#fff5f5', color: user.estado_cuenta === 'bloqueado' ? '#15803d' : '#dc2626', cursor: 'pointer' }}
+            >
+              {user.estado_cuenta === 'bloqueado' ? 'Activar' : 'Bloquear'}
+            </button>
+            <button
+              onClick={() => onEliminar(user.id, user.email)}
+              style={{ fontSize: 12, padding: '7px 14px', borderRadius: 9, border: `1px solid ${d.border2}`, background: 'transparent', color: d.text3, cursor: 'pointer' }}
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Admin() {
+  const { d } = useTheme()
   const [usuarios, setUsuarios] = useState([])
   const [invitaciones, setInvitaciones] = useState([])
+  const [reportes, setReportes] = useState([])
   const [loading, setLoading] = useState(true)
   const [generando, setGenerando] = useState(false)
   const [copiado, setCopiado] = useState(null)
   const [tab, setTab] = useState('usuarios')
+  const [emailInvite, setEmailInvite] = useState('')
   const navigate = useNavigate()
 
-  useEffect(() => {
-    cargar()
-  }, [])
+  useEffect(() => { cargar() }, [])
 
   const cargar = async () => {
     setLoading(true)
-
-    const { data: users } = await supabase
-      .from('users')
-      .select('id, email, nombre, role, estado_cuenta, created_at, temas_activos, meta_aciertos, fecha_examen')
-      .order('created_at', { ascending: false })
-
-    const { data: invites } = await supabase
-      .from('invitations')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    const { data: attempts } = await supabase
-      .from('attempts')
-      .select('user_id, es_correcta')
-
-    const statsPorUsuario = {}
+    const [{ data: users }, { data: invites }, { data: attempts }, { data: reps }] = await Promise.all([
+      supabase.from('users').select('id, email, nombre, role, estado_cuenta, created_at, meta_aciertos').order('created_at', { ascending: false }),
+      supabase.from('invitations').select('*').order('created_at', { ascending: false }),
+      supabase.from('attempts').select('user_id, es_correcta'),
+      supabase.from('reportes').select('*, users(nombre, email)').order('created_at', { ascending: false })
+    ])
+    const statsMap = {}
     attempts?.forEach(({ user_id, es_correcta }) => {
-      if (!statsPorUsuario[user_id]) statsPorUsuario[user_id] = { total: 0, correctas: 0 }
-      statsPorUsuario[user_id].total++
-      if (es_correcta) statsPorUsuario[user_id].correctas++
+      if (!statsMap[user_id]) statsMap[user_id] = { total: 0, correctas: 0 }
+      statsMap[user_id].total++; if (es_correcta) statsMap[user_id].correctas++
     })
-
-    const usersConStats = (users || []).map(u => ({
-      ...u,
-      stats: statsPorUsuario[u.id] || { total: 0, correctas: 0 }
-    }))
-
-    setUsuarios(usersConStats)
+    const reportesPorUsuario = {}
+    reps?.forEach(r => {
+      if (!reportesPorUsuario[r.user_id]) reportesPorUsuario[r.user_id] = 0
+      reportesPorUsuario[r.user_id]++
+    })
+    setUsuarios((users || []).map(u => ({ ...u, stats: statsMap[u.id] || { total: 0, correctas: 0 }, reportesCount: reportesPorUsuario[u.id] || 0 })))
     setInvitaciones(invites || [])
+    setReportes(reps || [])
     setLoading(false)
   }
 
   const generarInvitacion = async () => {
+    if (!emailInvite.trim()) return
     setGenerando(true)
     const { data: { user } } = await supabase.auth.getUser()
-    const codigo = generarCodigo()
     await supabase.from('invitations').insert({
-      codigo,
+      codigo: generarCodigo(),
       creado_por: user.id,
-      activo: true
+      activo: true,
+      email_destinatario: emailInvite.trim().toLowerCase()
     })
+    setEmailInvite('')
     await cargar()
     setGenerando(false)
   }
 
   const copiarLink = (codigo) => {
-    const url = `${window.location.origin}/register?invite=${codigo}`
-    navigator.clipboard.writeText(url)
-    setCopiado(codigo)
-    setTimeout(() => setCopiado(null), 2000)
+    navigator.clipboard.writeText(`${window.location.origin}/register?invite=${codigo}`)
+    setCopiado(codigo); setTimeout(() => setCopiado(null), 2000)
   }
 
-  const desactivarInvitacion = async (id) => {
-    await supabase.from('invitations').update({ activo: false }).eq('id', id)
+  const desactivar = async (id) => { await supabase.from('invitations').delete().eq('id', id); await cargar() }
+  const toggleBloqueo = async (userId, estado) => { await supabase.from('users').update({ estado_cuenta: estado === 'activo' ? 'bloqueado' : 'activo' }).eq('id', userId); await cargar() }
+  const eliminar = async (userId, email) => {
+  if (!window.confirm(`¿Eliminar a ${email}?`)) return
+  await supabase.rpc('eliminar_usuario', { p_user_id: userId })
+  await cargar()
+}
+  const toggleAdmin = async (userId, role) => {
+    if (!window.confirm(role === 'admin' ? '¿Quitar permisos de admin?' : '¿Dar permisos de admin a este usuario?')) return
+    await supabase.from('users').update({ role: role === 'admin' ? 'user' : 'admin' }).eq('id', userId)
     await cargar()
   }
+  const marcarReporte = async (id, estado) => { await supabase.from('reportes').update({ estado }).eq('id', id); await cargar() }
 
-  const toggleBloqueo = async (userId, estadoActual) => {
-  const nuevoEstado = estadoActual === 'activo' ? 'bloqueado' : 'activo'
-  await supabase
-    .from('users')
-    .update({ estado_cuenta: nuevoEstado })
-    .eq('id', userId)
-  await cargar()
-}
+  const formatFechaHora = (s) => s ? new Date(s).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'
 
-const eliminarUsuario = async (userId, email) => {
-  const confirmar = window.confirm(`¿Eliminar a ${email}? Esta acción no se puede deshacer.`)
-  if (!confirmar) return
-  await supabase.from('users').delete().eq('id', userId)
-  await cargar()
-}
+  const invActivas = invitaciones.filter(i => i.activo && !i.usado_por)
+  const invUsadas = invitaciones.filter(i => i.usado_por)
+  const reportesPendientes = reportes.filter(r => r.estado === 'pendiente')
 
-  const formatFecha = (fechaStr) => {
-    if (!fechaStr) return '—'
-    return new Date(fechaStr).toLocaleDateString('es-AR', {
-      day: '2-digit', month: '2-digit', year: '2-digit'
-    })
-  }
+  const TABS = [
+    { id: 'usuarios', label: `Usuarios (${usuarios.length})` },
+    { id: 'reportes', label: `Reportes${reportesPendientes.length > 0 ? ` (${reportesPendientes.length})` : ''}` },
+    { id: 'invitaciones', label: `Invitaciones (${invActivas.length})` },
+  ]
 
-  const getPct = (stats) => {
-    if (!stats.total) return null
-    return Math.round((stats.correctas / stats.total) * 100)
-  }
-
-  const getColorPct = (pct) => {
-    if (pct === null) return 'text-gray-300'
-    if (pct >= 80) return 'text-green-600'
-    if (pct >= 60) return 'text-yellow-600'
-    return 'text-red-500'
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  const invitacionesActivas = invitaciones.filter(i => i.activo && !i.usado_por)
-  const invitacionesUsadas = invitaciones.filter(i => i.usado_por)
+  if (loading) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: d.bg }}>
+      <div style={{ width: 24, height: 24, border: `2px solid ${d.text1}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-3xl mx-auto">
+    <div style={{ minHeight: '100vh', background: d.bg, padding: '32px 16px', transition: 'background 0.2s' }}>
+      <div style={{ maxWidth: 700, margin: '0 auto' }}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
-            <h1 className="text-2xl font-medium text-gray-900">Panel admin.</h1>
-            <p className="text-sm text-gray-400 mt-0.5">
-              {usuarios.length} usuarios · {invitacionesActivas.length} invitaciones activas
-            </p>
+            <h1 style={{ fontSize: 22, fontWeight: 500, color: d.text1, margin: '0 0 4px' }}>Panel admin.</h1>
+            <p style={{ fontSize: 12, color: d.text3, margin: 0 }}>{usuarios.length} usuarios · {invActivas.length} invitaciones · {reportesPendientes.length} reportes pendientes</p>
           </div>
-          <button
-            onClick={() => navigate('/')}
-            className="text-xs text-gray-400 border border-gray-200 rounded-lg px-3 py-1.5 hover:text-black hover:border-gray-400 transition-colors"
-          >
-            Salir
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <DarkModeToggle />
+            <button onClick={() => navigate('/')} style={{ fontSize: 12, color: d.text3, border: `1px solid ${d.border2}`, borderRadius: 10, padding: '6px 14px', background: 'transparent', cursor: 'pointer' }}>Salir</button>
+          </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6">
-          <button
-            onClick={() => setTab('usuarios')}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-              tab === 'usuarios' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Usuarios ({usuarios.length})
-          </button>
-          <button
-            onClick={() => setTab('invitaciones')}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-              tab === 'invitaciones' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Invitaciones ({invitacionesActivas.length} activas)
-          </button>
+        <div style={{ display: 'flex', gap: 4, background: d.card2, borderRadius: 14, padding: 4, marginBottom: 20 }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 500, borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: tab === t.id ? d.card : 'transparent',
+              color: t.id === 'reportes' && reportesPendientes.length > 0 && tab !== 'reportes' ? '#7c3aed' : tab === t.id ? d.text1 : d.text3,
+              transition: 'all 0.15s'
+            }}>{t.label}</button>
+          ))}
         </div>
 
-        {/* Tab: Usuarios */}
         {tab === 'usuarios' && (
-          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Usuario</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Registro</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Preguntas</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Aciertos</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wide">Estado</th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usuarios.map(user => {
-                    const pct = getPct(user.stats)
-                    return (
-                      <tr key={user.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                              <span className="text-xs font-medium text-gray-500">
-                                {(user.nombre || user.email || '?')[0].toUpperCase()}
-                              </span>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {user.nombre || 'Sin nombre'}
-                              </p>
-                              <p className="text-xs text-gray-400 truncate">{user.email}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-xs text-gray-600">{formatFecha(user.created_at)}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-xs text-gray-600">{user.stats.total}</p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className={`text-sm font-medium ${getColorPct(pct)}`}>
-                            {pct !== null ? `${pct}%` : '—'}
-                          </p>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            {user.role === 'admin' && (
-                              <span className="text-[10px] bg-black text-white rounded px-1.5 py-0.5">admin</span>
-                            )}
-                            <span className={`text-[10px] rounded px-1.5 py-0.5 ${
-                              user.estado_cuenta === 'bloqueado'
-                                ? 'bg-red-100 text-red-600'
-                                : 'bg-green-100 text-green-700'
-                            }`}>
-                              {user.estado_cuenta || 'activo'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-  {user.role !== 'admin' && (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => toggleBloqueo(user.id, user.estado_cuenta)}
-        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
-          user.estado_cuenta === 'bloqueado'
-            ? 'border-green-200 text-green-700 hover:bg-green-50'
-            : 'border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-500'
-        }`}
-      >
-        {user.estado_cuenta === 'bloqueado' ? 'Activar' : 'Bloquear'}
-      </button>
-      <button
-        onClick={() => eliminarUsuario(user.id, user.email)}
-        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-500 transition-colors"
-      >
-        Eliminar
-      </button>
-    </div>
-  )}
-</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {usuarios.map(user => (
+              <UserCard key={user.id} user={user} reportesCount={user.reportesCount} d={d}
+                onToggleBloqueo={toggleBloqueo} onEliminar={eliminar} onToggleAdmin={toggleAdmin} />
+            ))}
           </div>
         )}
 
-        {/* Tab: Invitaciones */}
+        {tab === 'reportes' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {reportes.length === 0 ? (
+              <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 40, textAlign: 'center' }}>
+                <p style={{ fontSize: 13, color: d.text3, margin: 0 }}>No hay reportes todavía.</p>
+              </div>
+            ) : reportes.map(r => (
+              <div key={r.id} style={{ background: d.card, border: `1px solid ${r.estado === 'pendiente' ? 'rgba(167,139,250,0.4)' : d.border}`, borderRadius: 16, padding: 20 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, fontWeight: 500, padding: '2px 8px', borderRadius: 99, background: r.estado === 'pendiente' ? 'rgba(167,139,250,0.15)' : r.estado === 'resuelto' ? '#dcfce7' : d.card2, color: r.estado === 'pendiente' ? '#7c3aed' : r.estado === 'resuelto' ? '#15803d' : d.text3 }}>{r.estado}</span>
+                    {r.codigo_pregunta && <span style={{ fontSize: 10, color: d.text3, fontFamily: 'monospace', background: d.card2, padding: '2px 6px', borderRadius: 6 }}>{r.codigo_pregunta}</span>}
+                    <span style={{ fontSize: 10, color: d.text3 }}>{formatFechaHora(r.created_at)}</span>
+                  </div>
+                  <p style={{ fontSize: 12, color: d.text2, margin: '0 0 4px' }}>{r.users?.nombre || r.users?.email || 'Usuario'}</p>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 8px', lineHeight: 1.5 }}>{r.pregunta}</p>
+                  {r.respuesta_sugerida && <p style={{ fontSize: 12, color: d.text2, margin: '0 0 8px' }}>Respuesta sugerida: <strong style={{ color: d.text1 }}>{r.respuesta_sugerida}</strong></p>}
+                  <div style={{ background: d.card2, borderRadius: 10, padding: '10px 12px' }}>
+                    <p style={{ fontSize: 12, color: d.text2, margin: 0, lineHeight: 1.6 }}>{r.argumento}</p>
+                  </div>
+                </div>
+                {r.estado === 'pendiente' && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => marcarReporte(r.id, 'resuelto')} style={{ fontSize: 11, padding: '6px 14px', borderRadius: 8, border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', cursor: 'pointer' }}>Marcar resuelto</button>
+                    <button onClick={() => marcarReporte(r.id, 'descartado')} style={{ fontSize: 11, padding: '6px 14px', borderRadius: 8, border: `1px solid ${d.border2}`, background: 'transparent', color: d.text3, cursor: 'pointer' }}>Descartar</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {tab === 'invitaciones' && (
-          <div className="flex flex-col gap-4">
-            <div className="flex justify-end">
-              <button
-                onClick={generarInvitacion}
-                disabled={generando}
-                className="bg-black text-white text-sm rounded-xl px-4 py-2.5 hover:bg-gray-800 transition-colors disabled:opacity-50"
-              >
-                {generando ? '...' : '+ Generar link de invitación'}
-              </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 16, padding: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: d.text3, margin: '0 0 12px' }}>Nueva invitación</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="email"
+                  value={emailInvite}
+                  onChange={e => setEmailInvite(e.target.value)}
+                  placeholder="email@destinatario.com"
+                  onKeyDown={e => e.key === 'Enter' && generarInvitacion()}
+                  style={{ flex: 1, background: d.card2, border: `1px solid ${d.border2}`, borderRadius: 10, padding: '9px 12px', fontSize: 13, color: d.text1, outline: 'none', fontFamily: 'inherit' }}
+                />
+                <button
+                  onClick={generarInvitacion}
+                  disabled={generando || !emailInvite.trim()}
+                  style={{ background: d.btnBg, color: d.btnText, border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, cursor: emailInvite.trim() ? 'pointer' : 'not-allowed', opacity: (!emailInvite.trim() || generando) ? 0.4 : 1, whiteSpace: 'nowrap' }}
+                >
+                  {generando ? '...' : 'Generar link'}
+                </button>
+              </div>
             </div>
 
-            {invitacionesActivas.length > 0 && (
-              <div className="bg-white border border-gray-100 rounded-2xl p-5">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-                  Activas ({invitacionesActivas.length})
+
+            {invitaciones.length > 0 && (
+              <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 16, padding: 20 }}>
+                <p style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: d.text3, margin: '0 0 12px' }}>
+                  Invitaciones ({invitaciones.length})
                 </p>
-                <div className="flex flex-col gap-2">
-                  {invitacionesActivas.map(inv => (
-                    <div key={inv.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
-                      <div>
-                        <p className="text-sm font-mono font-medium text-gray-900">{inv.codigo}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Creado {formatFecha(inv.created_at)}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[...invitaciones].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(inv => (
+                    <div key={inv.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: d.card2, borderRadius: 12, padding: '10px 14px', gap: 12 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 500, color: inv.usado_por ? d.text3 : d.text1, margin: '0 0 2px', textDecoration: inv.usado_por ? 'line-through' : 'none' }}>
+                          {inv.codigo}
+                        </p>
+                        <p style={{ fontSize: 11, color: d.text3, margin: 0 }}>
+                          {inv.email_destinatario || 'Sin email asignado'}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => copiarLink(inv.codigo)}
-                          className={`text-xs px-3 py-1.5 rounded-lg transition-colors border ${
-                            copiado === inv.codigo
-                              ? 'bg-green-50 border-green-200 text-green-700'
-                              : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                          }`}
-                        >
-                          {copiado === inv.codigo ? '✓ Copiado' : 'Copiar link'}
-                        </button>
-                        <button
-                          onClick={() => desactivarInvitacion(inv.id)}
-                          className="text-xs text-gray-400 hover:text-red-500 transition-colors px-1"
-                        >
-                          ✕
-                        </button>
+                      <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
+                        {inv.usado_por ? (
+                          <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 8, background: '#dcfce7', color: '#15803d', fontWeight: 500 }}>
+                            ✓ Aceptada
+                          </span>
+                        ) : (
+                          <>
+                            <button onClick={() => copiarLink(inv.codigo)} style={{ fontSize: 11, padding: '4px 12px', borderRadius: 8, border: `1px solid ${copiado === inv.codigo ? '#22c55e' : d.border2}`, background: copiado === inv.codigo ? '#dcfce7' : 'transparent', color: copiado === inv.codigo ? '#15803d' : d.text2, cursor: 'pointer' }}>
+                              {copiado === inv.codigo ? '✓ Copiado' : 'Copiar link'}
+                            </button>
+                            <button onClick={() => desactivar(inv.id)} style={{ fontSize: 11, color: d.text3, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {invitacionesUsadas.length > 0 && (
-              <div className="bg-white border border-gray-100 rounded-2xl p-5">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-                  Usadas ({invitacionesUsadas.length})
-                </p>
-                <div className="flex flex-col gap-2">
-                  {invitacionesUsadas.map(inv => (
-                    <div key={inv.id} className="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0">
-                      <div>
-                        <p className="text-sm font-mono text-gray-400 line-through">{inv.codigo}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Usado {formatFecha(inv.usado_at)}</p>
-                      </div>
-                      <span className="text-xs bg-gray-100 text-gray-500 rounded px-2 py-1">usado</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {invitacionesActivas.length === 0 && invitacionesUsadas.length === 0 && (
-              <div className="bg-white border border-gray-100 rounded-2xl p-8 text-center">
-                <p className="text-sm text-gray-400">No hay invitaciones todavía.</p>
               </div>
             )}
           </div>

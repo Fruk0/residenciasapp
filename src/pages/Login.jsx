@@ -15,12 +15,28 @@ export default function Login() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (error) {
+    if (loginError) {
       setError('Email o contraseña incorrectos.')
       setLoading(false)
+      return
     }
+
+    const { data: userData } = await supabase
+      .from('users')
+      .select('estado_cuenta')
+      .eq('id', data.user.id)
+      .single()
+
+    if (userData?.estado_cuenta === 'bloqueado') {
+      await supabase.auth.signOut()
+      setError('Tu cuenta fue bloqueada. Contactá al administrador.')
+      setLoading(false)
+      return
+    }
+
+    // login exitoso — App.jsx maneja la redirección via onAuthStateChange
   }
 
   return (
@@ -31,9 +47,7 @@ export default function Login() {
       <form onSubmit={handleLogin} className="flex flex-col gap-4">
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-gray-500 tracking-wide uppercase">
-            Email
-          </label>
+          <label className="text-xs font-medium text-gray-500 tracking-wide uppercase">Email</label>
           <input
             type="email"
             value={email}
@@ -45,9 +59,7 @@ export default function Login() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-gray-500 tracking-wide uppercase">
-            Contraseña
-          </label>
+          <label className="text-xs font-medium text-gray-500 tracking-wide uppercase">Contraseña</label>
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -85,13 +97,6 @@ export default function Login() {
         >
           {loading ? 'Ingresando...' : 'Ingresar'}
         </button>
-
-        <div className="flex items-center gap-3 my-1">
-          <div className="flex-1 h-px bg-gray-100" />
-          <span className="text-xs text-gray-300">o</span>
-          <div className="flex-1 h-px bg-gray-100" />
-        </div>
-
 
       </form>
     </AuthLayout>

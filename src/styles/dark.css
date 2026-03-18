@@ -1,0 +1,10 @@
+.dark body { background: #16161a; }
+
+.dark .dk-bg    { background: #16161a; }
+.dark .dk-card  { background: #1f1f26; }
+.dark .dk-card2 { background: #252530; }
+.dark .dk-border { border-color: #2d2d35; }
+
+.dark .dk-text-1 { color: #f0f0f0; }
+.dark .dk-text-2 { color: #a0a0b0; }
+.dark .dk-text-3 { color: #6a6a7a; }

@@ -14,27 +14,21 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
   const [validandoInvite, setValidandoInvite] = useState(true)
   const [inviteValido, setInviteValido] = useState(false)
+  const [inviteData, setInviteData] = useState(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  useEffect(() => {
-    validarInvite()
-  }, [inviteCode])
+  useEffect(() => { validarInvite() }, [inviteCode])
 
   const validarInvite = async () => {
-    if (!inviteCode) {
-      setInviteValido(false)
-      setValidandoInvite(false)
-      return
-    }
-
+    if (!inviteCode) { setInviteValido(false); setValidandoInvite(false); return }
     const { data } = await supabase
       .from('invitations')
-      .select('id, activo, usado_por')
+      .select('id, activo, usado_por, email_destinatario')
       .eq('codigo', inviteCode)
       .single()
-
     setInviteValido(!!data && data.activo && !data.usado_por)
+    setInviteData(data)
     setValidandoInvite(false)
   }
 
@@ -45,6 +39,13 @@ export default function Register() {
 
     if (password.length < 8) {
       setError('La contraseña debe tener al menos 8 caracteres.')
+      setLoading(false)
+      return
+    }
+
+    if (inviteData?.email_destinatario &&
+      email.toLowerCase() !== inviteData.email_destinatario.toLowerCase()) {
+      setError('Invitación inválida.')
       setLoading(false)
       return
     }
@@ -61,14 +62,14 @@ export default function Register() {
       return
     }
 
-    await supabase
-      .from('invitations')
-      .update({
-        activo: false,
-        usado_por: data.user.id,
-        usado_at: new Date().toISOString()
-      })
-      .eq('codigo', inviteCode)
+    const userId = data.user.id
+
+    await supabase.from('users').update({ nombre }).eq('id', userId)
+
+    await supabase.rpc('marcar_invitacion_usada', {
+      p_invite_id: inviteData.id,
+      p_user_id: userId
+    })
 
     setSuccess(true)
     setLoading(false)
@@ -97,10 +98,7 @@ export default function Register() {
           <p className="text-sm text-gray-400 mb-8">
             Esta app está en beta cerrada. Necesitás un link de invitación válido para registrarte.
           </p>
-          <Link
-            to="/login"
-            className="text-sm text-black font-medium underline underline-offset-4 hover:text-gray-600 transition-colors"
-          >
+          <Link to="/login" className="text-sm text-black font-medium underline underline-offset-4 hover:text-gray-600 transition-colors">
             Ir al login
           </Link>
         </div>
@@ -118,13 +116,8 @@ export default function Register() {
             </svg>
           </div>
           <h2 className="text-xl font-medium text-black mb-2">Cuenta creada.</h2>
-          <p className="text-sm text-gray-400 mb-8">
-            Ya podés ingresar con tu email y contraseña.
-          </p>
-          <Link
-            to="/login"
-            className="text-sm text-black font-medium underline underline-offset-4 hover:text-gray-600 transition-colors"
-          >
+          <p className="text-sm text-gray-400 mb-8">Ya podés ingresar con tu email y contraseña.</p>
+          <Link to="/login" className="text-sm text-black font-medium underline underline-offset-4 hover:text-gray-600 transition-colors">
             Ir al login
           </Link>
         </div>
@@ -144,7 +137,7 @@ export default function Register() {
           <input
             type="text"
             value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
+            onChange={e => setNombre(e.target.value)}
             placeholder="Tu nombre"
             required
             className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-black placeholder:text-gray-300 focus:outline-none focus:border-black transition-colors"
@@ -156,7 +149,7 @@ export default function Register() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={e => setEmail(e.target.value)}
             placeholder="tu@email.com"
             required
             className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-black placeholder:text-gray-300 focus:outline-none focus:border-black transition-colors"
@@ -169,7 +162,7 @@ export default function Register() {
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={e => setPassword(e.target.value)}
               placeholder="Mínimo 8 caracteres"
               required
               className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-black placeholder:text-gray-300 focus:outline-none focus:border-black transition-colors pr-12"
@@ -185,9 +178,7 @@ export default function Register() {
         </div>
 
         {error && (
-          <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3.5 py-2.5">
-            {error}
-          </p>
+          <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3.5 py-2.5">{error}</p>
         )}
 
         <button
@@ -200,9 +191,7 @@ export default function Register() {
 
         <p className="text-center text-xs text-gray-400">
           ¿Ya tenés cuenta?{' '}
-          <Link to="/login" className="text-black font-medium hover:underline underline-offset-4">
-            Ingresar
-          </Link>
+          <Link to="/login" className="text-black font-medium hover:underline underline-offset-4">Ingresar</Link>
         </p>
 
       </form>

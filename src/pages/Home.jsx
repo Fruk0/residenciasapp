@@ -2,14 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { formatArea } from '../lib/formatArea'
-import { useDarkMode } from '../hooks/useDarkMode'
-
-function getSaludo() {
-  const h = new Date().getHours()
-  if (h >= 6 && h < 12) return 'Buenos días'
-  if (h >= 12 && h < 19) return 'Buenas tardes'
-  return 'Buenas noches'
-}
+import { useTheme } from '../hooks/useTheme'
 
 function SunIcon() {
   return (
@@ -30,14 +23,12 @@ function MoonIcon() {
 
 export default function Home({ session }) {
   const navigate = useNavigate()
-  const { isDark, toggle } = useDarkMode()
+  const { isDark, toggle, d } = useTheme()
   const [perfil, setPerfil] = useState(null)
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    cargar()
-  }, [])
+  useEffect(() => { cargar() }, [])
 
   const cargar = async () => {
     setLoading(true)
@@ -86,10 +77,7 @@ export default function Home({ session }) {
       const hace14 = new Date(hoy); hace14.setDate(hoy.getDate() - 14)
 
       const semana = intentos.filter(i => new Date(i.timestamp) >= hace7)
-      const semanaAnt = intentos.filter(i => {
-        const t = new Date(i.timestamp)
-        return t >= hace14 && t < hace7
-      })
+      const semanaAnt = intentos.filter(i => { const t = new Date(i.timestamp); return t >= hace14 && t < hace7 })
 
       const pctSemana = semana.length > 0 ? Math.round((semana.filter(i => i.es_correcta).length / semana.length) * 100) : null
       const pctSemanaAnt = semanaAnt.length > 0 ? Math.round((semanaAnt.filter(i => i.es_correcta).length / semanaAnt.length) * 100) : null
@@ -102,36 +90,32 @@ export default function Home({ session }) {
       if (dias[0] === todayStr || dias[0] === ayerStr) {
         racha = 1
         for (let i = 1; i < dias.length; i++) {
-          const diff = (new Date(dias[i-1]) - new Date(dias[i])) / 86400000
+          const diff = (new Date(dias[i - 1]) - new Date(dias[i])) / 86400000
           if (diff === 1) racha++
           else break
         }
       }
 
-      const sesiones = agruparSesiones(intentos).slice(0, 3)
+      const grupos = {}
+      intentos.forEach(({ timestamp, es_correcta, modo }) => {
+        const key = `${timestamp.split('T')[0]}_${modo}`
+        if (!grupos[key]) grupos[key] = { fecha: timestamp, modo, correctas: 0, total: 0 }
+        grupos[key].total++
+        if (es_correcta) grupos[key].correctas++
+      })
+      const sesiones = Object.values(grupos)
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+        .map(({ fecha, modo, correctas, total }) => ({
+          fecha, modo,
+          porcentaje: Math.round((correctas / total) * 100),
+          total
+        }))
+        .slice(0, 3)
 
       setStats({ pctGlobal, total, correctasTotal, porArea, comparativa, racha, sesiones, meta: userData?.meta_aciertos || 80 })
     }
 
     setLoading(false)
-  }
-
-  const agruparSesiones = (intentos) => {
-    const grupos = {}
-    intentos.forEach(({ timestamp, es_correcta, modo }) => {
-      const key = `${timestamp.split('T')[0]}_${modo}`
-      if (!grupos[key]) grupos[key] = { fecha: timestamp, modo, correctas: 0, total: 0 }
-      grupos[key].total++
-      if (es_correcta) grupos[key].correctas++
-    })
-    return Object.values(grupos)
-      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-      .map(({ fecha, modo, correctas, total }) => ({
-        fecha,
-        modo,
-        porcentaje: Math.round((correctas / total) * 100),
-        total
-      }))
   }
 
   const diasParaExamen = () => {
@@ -150,16 +134,10 @@ export default function Home({ session }) {
     return dia.split('-').reverse().join('/')
   }
 
-  const getColorPct = (pct, meta) => {
-    if (pct >= meta) return 'text-green-600 dark:text-green-400'
-    if (pct >= meta * 0.75) return 'text-yellow-600 dark:text-yellow-400'
-    return 'text-red-500 dark:text-red-400'
-  }
-
-  const getBarColor = (pct, meta) => {
-    if (pct >= meta) return 'bg-green-500'
-    if (pct >= meta * 0.75) return 'bg-yellow-500'
-    return 'bg-red-500'
+  const getColor = (pct, meta) => {
+    if (pct >= meta) return '#22c55e'
+    if (pct >= meta * 0.75) return '#eab308'
+    return '#ef4444'
   }
 
   const iniciales = (nombre) => {
@@ -169,175 +147,164 @@ export default function Home({ session }) {
 
   const dias = diasParaExamen()
   const nombre = perfil?.nombre?.split(' ')[0] || null
-  const saludo = `${getSaludo()}${nombre ? `, ${nombre}` : ''}.`
+  const saludo = `Hola${nombre ? `, ${nombre}` : ''}.`
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <div className="w-6 h-6 border-2 border-gray-900 dark:border-white border-t-transparent rounded-full animate-spin" />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: d.bg }}>
+        <div style={{ width: 24, height: 24, border: `2px solid ${d.text1}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
-      <div className="max-w-5xl mx-auto px-6 py-8">
+    <div style={{ minHeight: '100vh', background: d.bg, transition: 'background 0.2s' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
           <div>
-            <h1 className="text-2xl font-medium text-gray-900 dark:text-white">{saludo}</h1>
-            <p className="text-sm text-gray-400 mt-0.5">
-              {dias ? `Examen en ${dias} días · ` : ''}Meta: {perfil?.meta_aciertos || 80}%
-            </p>
+            <h1 style={{ fontSize: 24, fontWeight: 500, color: d.text1, margin: 0 }}>{saludo}</h1>
+            {dias && <p style={{ fontSize: 13, color: d.text3, marginTop: 4, marginBottom: 0 }}>Examen en {dias} días</p>}
           </div>
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {perfil?.role === 'admin' && (
               <button
                 onClick={() => navigate('/admin')}
-                className="text-xs border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-lg px-3 py-1.5 hover:border-gray-400 transition-colors"
+                style={{ fontSize: 12, color: d.text2, border: `1px solid ${d.border2}`, borderRadius: 8, padding: '6px 12px', background: 'transparent', cursor: 'pointer' }}
               >
                 Admin
               </button>
             )}
             <button
               onClick={toggle}
-              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-400 transition-colors"
+              style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, border: `1px solid ${d.border2}`, background: 'transparent', cursor: 'pointer', color: d.text2 }}
             >
               {isDark ? <SunIcon /> : <MoonIcon />}
             </button>
             <button
               onClick={() => navigate('/profile')}
-              className="w-9 h-9 rounded-full bg-gray-900 dark:bg-white flex items-center justify-center"
+              style={{ width: 36, height: 36, borderRadius: '50%', background: d.btnBg, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
             >
-              <span className="text-xs font-medium text-white dark:text-gray-900">{iniciales(perfil?.nombre)}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: d.btnText }}>{iniciales(perfil?.nombre)}</span>
             </button>
           </div>
         </div>
 
         {/* Métricas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
           {[
             {
               label: 'Aciertos globales',
-              value: stats?.pctGlobal !== null ? `${stats.pctGlobal}%` : '—',
+              value: stats?.pctGlobal != null ? `${stats.pctGlobal}%` : '—',
               sub: `meta: ${stats?.meta || 80}%`,
-              color: stats?.pctGlobal !== null ? getColorPct(stats.pctGlobal, stats?.meta) : 'text-gray-900 dark:text-white'
+              color: stats?.pctGlobal != null ? getColor(stats.pctGlobal, stats.meta) : d.text1
             },
-            {
-              label: 'Respondidas',
-              value: stats?.total || 0,
-              sub: 'preguntas',
-              color: 'text-gray-900 dark:text-white'
-            },
+            { label: 'Respondidas', value: stats?.total || 0, sub: 'preguntas', color: d.text1 },
             {
               label: 'Racha',
               value: `${stats?.racha || 0} días`,
               sub: stats?.racha > 0 ? 'seguí así' : 'empezá hoy',
-              color: stats?.racha > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'
+              color: stats?.racha > 0 ? '#22c55e' : d.text1
             },
             {
               label: 'vs semana ant.',
-              value: stats?.comparativa === null ? '—' : stats?.comparativa > 0 ? `+${stats.comparativa}%` : stats?.comparativa === 0 ? '=' : `${stats.comparativa}%`,
+              value: stats?.comparativa == null ? '—' : stats.comparativa > 0 ? `+${stats.comparativa}%` : stats.comparativa === 0 ? '=' : `${stats.comparativa}%`,
               sub: stats?.comparativa > 0 ? 'mejorando' : stats?.comparativa < 0 ? 'a reforzar' : '',
-              color: stats?.comparativa > 0 ? 'text-green-600 dark:text-green-400' : stats?.comparativa < 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-900 dark:text-white'
+              color: stats?.comparativa > 0 ? '#22c55e' : stats?.comparativa < 0 ? '#ef4444' : d.text1
             }
           ].map(({ label, value, sub, color }) => (
-            <div key={label} className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
-              <p className="text-xs text-gray-400 mb-1">{label}</p>
-              <p className={`text-2xl font-medium mb-0.5 ${color}`}>{value}</p>
-              <p className="text-xs text-gray-400">{sub}</p>
+            <div key={label} style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 14, padding: 16 }}>
+              <p style={{ fontSize: 11, color: d.text3, margin: '0 0 6px' }}>{label}</p>
+              <p style={{ fontSize: 26, fontWeight: 500, color, margin: '0 0 4px' }}>{value}</p>
+              <p style={{ fontSize: 11, color: d.text3, margin: 0 }}>{sub}</p>
             </div>
           ))}
         </div>
 
         {/* Acciones + Especialidades */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
 
-          {/* Acciones rápidas */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
-            <p className="text-sm font-medium text-gray-900 dark:text-white mb-4">Acciones rápidas</p>
-            <div className="flex flex-col gap-3">
+          <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 16px' }}>Acciones rápidas</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
               <button
                 onClick={() => navigate('/practice')}
-                className="w-full bg-gray-900 dark:bg-white rounded-xl px-4 py-3.5 flex items-center justify-between hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
+                style={{ background: d.btnBg, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}
               >
-                <div className="text-left">
-                  <p className="text-sm font-medium text-white dark:text-gray-900">Practicar por tema</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">Elegís área y subtema</p>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: d.btnText, margin: '0 0 2px' }}>Practicar por tema</p>
+                  <p style={{ fontSize: 11, color: d.btnSubText, margin: 0 }}>Elegís área y subtema</p>
                 </div>
-                <svg className="w-4 h-4 text-gray-400 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={d.btnSubText} strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
                 </svg>
               </button>
 
               <button
                 onClick={() => navigate('/simulacro')}
-                className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3.5 flex items-center justify-between hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+                style={{ background: 'transparent', border: `1px solid ${d.border2}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%', textAlign: 'left' }}
               >
-                <div className="text-left">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Simulacro personalizado</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Modo examen con timer</p>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: d.text1, margin: '0 0 2px' }}>Simulacro personalizado</p>
+                  <p style={{ fontSize: 11, color: d.text3, margin: 0 }}>Modo examen con timer</p>
                 </div>
-                <svg className="w-4 h-4 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={d.text3} strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
                 </svg>
               </button>
 
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-full border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-3.5 flex items-center justify-between hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+                style={{ background: 'transparent', border: `1px solid ${d.border}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%', textAlign: 'left' }}
               >
-                <div className="text-left">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Ver mi progreso completo</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Dashboard detallado</p>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: d.text1, margin: '0 0 2px' }}>Ver mi progreso completo</p>
+                  <p style={{ fontSize: 11, color: d.text3, margin: 0 }}>Dashboard detallado</p>
                 </div>
-                <svg className="w-4 h-4 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={d.text3} strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />
                 </svg>
               </button>
+
             </div>
           </div>
 
-          {/* Por especialidad */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
-            <p className="text-sm font-medium text-gray-900 dark:text-white mb-4">Por especialidad</p>
+          <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 16px' }}>Por especialidad</p>
             {stats?.porArea && Object.keys(stats.porArea).length > 0 ? (
               <>
-                <div className="flex flex-col gap-3">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {Object.entries(stats.porArea)
-                    .map(([area, { correctas, total }]) => ({
-                      area,
-                      pct: Math.round((correctas / total) * 100),
-                      total
-                    }))
+                    .map(([area, { correctas, total }]) => ({ area, pct: Math.round((correctas / total) * 100) }))
                     .sort((a, b) => b.pct - a.pct)
                     .slice(0, 5)
                     .map(({ area, pct }) => (
                       <div key={area}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs text-gray-600 dark:text-gray-400">{formatArea(area)}</span>
-                          <span className={`text-xs font-medium ${getColorPct(pct, stats.meta)}`}>{pct}%</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                          <span style={{ fontSize: 12, color: d.text2 }}>{formatArea(area)}</span>
+                          <span style={{ fontSize: 12, fontWeight: 500, color: getColor(pct, stats.meta) }}>{pct}%</span>
                         </div>
-                        <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${getBarColor(pct, stats.meta)}`} style={{ width: `${pct}%` }} />
+                        <div style={{ height: 4, background: d.track, borderRadius: 99, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: getColor(pct, stats.meta), borderRadius: 99, transition: 'width 0.5s' }} />
                         </div>
                       </div>
                     ))}
                 </div>
                 <button
                   onClick={() => navigate('/dashboard')}
-                  className="w-full text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors mt-4 underline underline-offset-4"
+                  style={{ width: '100%', marginTop: 14, fontSize: 11, color: d.text3, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
                 >
                   Ver todas las especialidades →
                 </button>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <p className="text-sm text-gray-400 mb-3">Todavía no respondiste ninguna pregunta.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 0', textAlign: 'center' }}>
+                <p style={{ fontSize: 13, color: d.text3, marginBottom: 12 }}>Todavía no respondiste ninguna pregunta.</p>
                 <button
                   onClick={() => navigate('/practice')}
-                  className="text-sm text-gray-900 dark:text-white font-medium underline underline-offset-4"
+                  style={{ fontSize: 13, color: d.text1, fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
                 >
                   Empezar a practicar
                 </button>
@@ -348,20 +315,18 @@ export default function Home({ session }) {
 
         {/* Últimas sesiones */}
         {stats?.sesiones?.length > 0 && (
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5">
-            <p className="text-sm font-medium text-gray-900 dark:text-white mb-4">Últimas sesiones</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 14px' }}>Últimas sesiones</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
               {stats.sesiones.map(({ fecha, modo, porcentaje, total }, i) => (
-                <div key={i} className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: d.card2, border: `1px solid ${d.border}`, borderRadius: 12 }}>
                   <div>
-                    <p className="text-xs font-medium text-gray-900 dark:text-white capitalize">
+                    <p style={{ fontSize: 12, fontWeight: 500, color: d.text1, margin: '0 0 2px' }}>
                       {modo === 'simulacro' ? 'Simulacro' : 'Práctica'} · {total} preguntas
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">{formatFechaSesion(fecha)}</p>
+                    <p style={{ fontSize: 11, color: d.text3, margin: 0 }}>{formatFechaSesion(fecha)}</p>
                   </div>
-                  <span className={`text-sm font-medium ${getColorPct(porcentaje, stats.meta)}`}>
-                    {porcentaje}%
-                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: getColor(porcentaje, stats.meta) }}>{porcentaje}%</span>
                 </div>
               ))}
             </div>
@@ -369,10 +334,10 @@ export default function Home({ session }) {
         )}
 
         {/* Footer */}
-        <div className="flex justify-center mt-8">
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32 }}>
           <button
             onClick={async () => await supabase.auth.signOut()}
-            className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline underline-offset-4 transition-colors"
+            style={{ fontSize: 12, color: d.text3, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
           >
             Cerrar sesión
           </button>
