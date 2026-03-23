@@ -93,17 +93,19 @@ export default function Admin() {
   const [copiado, setCopiado] = useState(null)
   const [tab, setTab] = useState('usuarios')
   const [emailInvite, setEmailInvite] = useState('')
+  const [preguntasStats, setPreguntasStats] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => { cargar() }, [])
 
   const cargar = async () => {
     setLoading(true)
-    const [{ data: users }, { data: invites }, { data: attempts }, { data: reps }] = await Promise.all([
+    const [{ data: users }, { data: invites }, { data: attempts }, { data: reps }, { data: preguntas }] = await Promise.all([
       supabase.from('users').select('id, email, nombre, role, estado_cuenta, created_at, meta_aciertos').order('created_at', { ascending: false }),
       supabase.from('invitations').select('*').order('created_at', { ascending: false }),
       supabase.from('attempts').select('user_id, es_correcta'),
-      supabase.from('reportes').select('*, users(nombre, email)').order('created_at', { ascending: false })
+      supabase.from('reportes').select('*, users(nombre, email)').order('created_at', { ascending: false }),
+      supabase.from('questions').select('especialidad, subtema, estado').eq('estado', 'activo').limit(2000)
     ])
     const statsMap = {}
     attempts?.forEach(({ user_id, es_correcta }) => {
@@ -118,6 +120,19 @@ export default function Admin() {
     setUsuarios((users || []).map(u => ({ ...u, stats: statsMap[u.id] || { total: 0, correctas: 0 }, reportesCount: reportesPorUsuario[u.id] || 0 })))
     setInvitaciones(invites || [])
     setReportes(reps || [])
+
+    if (preguntas) {
+      const porEspecialidad = {}
+      preguntas.forEach(({ especialidad, subtema }) => {
+        const esp = especialidad || 'sin_especialidad'
+        if (!porEspecialidad[esp]) porEspecialidad[esp] = { total: 0, subtemas: {} }
+        porEspecialidad[esp].total++
+        const sub = subtema || 'general'
+        if (!porEspecialidad[esp].subtemas[sub]) porEspecialidad[esp].subtemas[sub] = 0
+        porEspecialidad[esp].subtemas[sub]++
+      })
+      setPreguntasStats({ total: preguntas.length, porEspecialidad })
+    }
     setLoading(false)
   }
 
@@ -165,6 +180,7 @@ export default function Admin() {
     { id: 'usuarios', label: `Usuarios (${usuarios.length})` },
     { id: 'reportes', label: `Reportes${reportesPendientes.length > 0 ? ` (${reportesPendientes.length})` : ''}` },
     { id: 'invitaciones', label: `Invitaciones (${invActivas.length})` },
+    { id: 'banco', label: 'Banco' },
   ]
 
   if (loading) return (
@@ -300,6 +316,58 @@ export default function Admin() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {tab === 'banco' && preguntasStats && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 16, padding: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: d.text3, margin: '0 0 16px' }}>Resumen</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                <div style={{ background: d.card2, borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <p style={{ fontSize: 10, color: d.text3, margin: '0 0 4px' }}>Total preguntas</p>
+                  <p style={{ fontSize: 24, fontWeight: 500, color: d.text1, margin: 0 }}>{preguntasStats.total}</p>
+                </div>
+                <div style={{ background: d.card2, borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <p style={{ fontSize: 10, color: d.text3, margin: '0 0 4px' }}>Especialidades</p>
+                  <p style={{ fontSize: 24, fontWeight: 500, color: d.text1, margin: 0 }}>{Object.keys(preguntasStats.porEspecialidad).length}</p>
+                </div>
+                <div style={{ background: d.card2, borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                  <p style={{ fontSize: 10, color: d.text3, margin: '0 0 4px' }}>Subtemas</p>
+                  <p style={{ fontSize: 24, fontWeight: 500, color: d.text1, margin: 0 }}>{Object.values(preguntasStats.porEspecialidad).reduce((acc, e) => acc + Object.keys(e.subtemas).length, 0)}</p>
+                </div>
+              </div>
+            </div>
+
+            {Object.entries(preguntasStats.porEspecialidad)
+              .sort((a, b) => b[1].total - a[1].total)
+              .map(([esp, data]) => {
+                const pct = Math.round((data.total / preguntasStats.total) * 100)
+                return (
+                  <div key={esp} style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 14, overflow: 'hidden' }}>
+                    <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 2px' }}>{esp.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+                        <p style={{ fontSize: 11, color: d.text3, margin: 0 }}>{Object.keys(data.subtemas).length} subtemas</p>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <p style={{ fontSize: 16, fontWeight: 500, color: d.text1, margin: '0 0 2px' }}>{data.total}</p>
+                        <p style={{ fontSize: 10, color: d.text3, margin: 0 }}>{pct}%</p>
+                      </div>
+                    </div>
+                    <div style={{ height: 3, background: d.track }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: '#a78bfa' }} />
+                    </div>
+                    <div style={{ padding: '10px 16px 14px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {Object.entries(data.subtemas).sort((a, b) => b[1] - a[1]).map(([sub, count]) => (
+                        <span key={sub} style={{ fontSize: 10, background: d.card2, color: d.text2, borderRadius: 6, padding: '3px 8px' }}>
+                          {sub.replace(/_/g, ' ')} ({count})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
           </div>
         )}
 
