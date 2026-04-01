@@ -177,7 +177,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: d.bg, padding: '32px 16px', transition: 'background 0.2s' }}>
+    <div style={{ minHeight: '100dvh', background: d.bg, padding: '32px 16px', transition: 'background 0.2s' }}>
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>

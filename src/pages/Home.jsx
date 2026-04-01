@@ -130,7 +130,7 @@ export default function Home({ session }) {
   const meta = stats?.meta || 80
 
   return (
-    <div style={{ minHeight: '100vh', background: d.bg, transition: 'background 0.2s' }}>
+    <div style={{ minHeight: '100dvh', background: d.bg, transition: 'background 0.2s' }}>
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 16px' }}>
 
         {/* Header */}
