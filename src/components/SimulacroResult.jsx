@@ -1,78 +1,175 @@
+import { useState } from 'react'
+import { useTheme } from '../hooks/useTheme'
+import { supabase } from '../lib/supabase'
+import { formatArea } from '../lib/formatArea'
+import DarkModeToggle from './DarkModeToggle'
+
 const LETRA = ['A', 'B', 'C', 'D']
 const OPCION_KEY = ['opcion_a', 'opcion_b', 'opcion_c', 'opcion_d']
 const EXPLICACION_KEY = ['explicacion_a', 'explicacion_b', 'explicacion_c', 'explicacion_d']
 
+function formatPregunta(texto) {
+  const partes = texto.split('?')
+  if (partes.length < 2) return { caso: null, pregunta: texto }
+  const pregunta = partes[partes.length - 1].trim() === ''
+    ? partes[partes.length - 2].trim() + '?'
+    : partes[partes.length - 1].trim() + '?'
+  const caso = texto.replace(pregunta, '').trim()
+  return { caso: caso || null, pregunta }
+}
+
+function ReporteInline({ pregunta, d }) {
+  const [abierto, setAbierto] = useState(false)
+  const [respuestaSugerida, setRespuestaSugerida] = useState('')
+  const [argumento, setArgumento] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [enviado, setEnviado] = useState(false)
+
+  const handleEnviar = async () => {
+    if (!argumento.trim()) return
+    setEnviando(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('reportes').insert({
+      user_id: user.id,
+      question_id: pregunta.id,
+      codigo_pregunta: pregunta.codigo || null,
+      pregunta: pregunta.pregunta,
+      respuesta_sugerida: respuestaSugerida,
+      argumento: argumento.trim()
+    })
+    setEnviando(false)
+    setEnviado(true)
+  }
+
+  if (enviado) return (
+    <div style={{ padding: '8px 12px', background: 'rgba(167,139,250,0.08)', borderRadius: 8, marginTop: 8 }}>
+      <p style={{ fontSize: 11, color: '#7c3aed', margin: 0 }}>✓ Reporte enviado</p>
+    </div>
+  )
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        onClick={() => setAbierto(p => !p)}
+        style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+          <line x1="4" y1="22" x2="4" y2="15"/>
+        </svg>
+        Reportar pregunta
+      </button>
+
+      {abierto && (
+        <div style={{ marginTop: 8, padding: '12px', background: d.card2, borderRadius: 10, border: `1px solid rgba(167,139,250,0.2)` }}>
+          <p style={{ fontSize: 11, color: d.text3, margin: '0 0 8px' }}>¿Cuál creés que es la respuesta correcta?</p>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {LETRA.map(l => (
+              <button key={l} onClick={() => setRespuestaSugerida(l)} style={{
+                flex: 1, padding: '6px 0', fontSize: 12, fontWeight: 500, borderRadius: 8,
+                border: `1px solid ${respuestaSugerida === l ? '#7c3aed' : d.border2}`,
+                background: respuestaSugerida === l ? 'rgba(167,139,250,0.15)' : 'transparent',
+                color: respuestaSugerida === l ? '#7c3aed' : d.text2, cursor: 'pointer'
+              }}>{l}</button>
+            ))}
+          </div>
+          <textarea
+            value={argumento}
+            onChange={e => setArgumento(e.target.value)}
+            placeholder="Explicá por qué..."
+            rows={2}
+            style={{ width: '100%', background: d.card, border: `1px solid ${d.border2}`, borderRadius: 8, padding: '8px 10px', fontSize: 11, color: d.text1, outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 8 }}
+          />
+          <button
+            onClick={handleEnviar}
+            disabled={enviando || !argumento.trim()}
+            style={{
+              width: '100%', padding: '8px 0', fontSize: 12, fontWeight: 500,
+              background: argumento.trim() ? '#7c3aed' : d.card,
+              color: argumento.trim() ? '#fff' : d.text3,
+              border: 'none', borderRadius: 8, cursor: argumento.trim() ? 'pointer' : 'not-allowed',
+              opacity: enviando ? 0.6 : 1
+            }}
+          >
+            {enviando ? 'Enviando...' : 'Enviar reporte'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SimulacroResult({ preguntas, respuestas, onNuevoSimulacro, onRevisarErrores }) {
+  const { d, meta, isDark } = useTheme()
   const total = preguntas.length
   const correctas = respuestas.filter(r => r.esCorrecta).length
   const porcentaje = Math.round((correctas / total) * 100)
 
-  const getColorScore = () => {
-    if (porcentaje >= 80) return 'text-green-600'
-    if (porcentaje >= 60) return 'text-yellow-600'
-    return 'text-red-500'
+  const getColor = (pct) => pct >= meta ? '#22c55e' : pct >= meta * 0.75 ? '#eab308' : '#ef4444'
+  const getMensaje = (pct) => {
+    if (pct >= meta) return '¡Excelente! Estás por encima de la meta.'
+    if (pct >= meta * 0.75) return 'Buen intento. Seguí practicando.'
+    return 'Hay que repasar. Vas a llegar.'
   }
 
-  const getColorBg = () => {
-    if (porcentaje >= 80) return 'bg-green-50 border-green-200'
-    if (porcentaje >= 60) return 'bg-yellow-50 border-yellow-200'
-    return 'bg-red-50 border-red-200'
-  }
-
-  const porArea = {}
+  const porEspecialidad = {}
   preguntas.forEach((p, i) => {
-    if (!porArea[p.area]) porArea[p.area] = { correctas: 0, total: 0 }
-    porArea[p.area].total++
-    if (respuestas[i]?.esCorrecta) porArea[p.area].correctas++
+    const key = p.especialidad || p.area || 'General'
+    if (!porEspecialidad[key]) porEspecialidad[key] = { correctas: 0, total: 0 }
+    porEspecialidad[key].total++
+    if (respuestas[i]?.esCorrecta) porEspecialidad[key].correctas++
   })
 
   const errores = preguntas
     .map((p, i) => ({ pregunta: p, respuesta: respuestas[i] }))
     .filter(({ respuesta }) => !respuesta?.esCorrecta)
 
-  const correctaIdx = (p) => ['a', 'b', 'c', 'd'].indexOf(p.respuesta_correcta.toLowerCase())
+  const correctaIdx = (p) => ['a','b','c','d'].indexOf(p.respuesta_correcta.toLowerCase())
   const elegidaIdx = (r) => r?.respuestaDada != null ? r.respuestaDada : null
 
-  const formatPregunta = (texto) => {
-    const partes = texto.split('?')
-    if (partes.length < 2) return { caso: null, pregunta: texto }
-    const pregunta = partes[partes.length - 1].trim() === ''
-      ? partes[partes.length - 2].trim() + '?'
-      : partes[partes.length - 1].trim() + '?'
-    const caso = texto.replace(pregunta, '').trim()
-    return { caso, pregunta }
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-lg mx-auto">
+    <div style={{ minHeight: '100vh', background: d.bg, padding: '32px 16px', transition: 'background 0.2s' }}>
+      <div style={{ maxWidth: 560, margin: '0 auto' }}>
 
-        <div className={`border rounded-2xl p-6 text-center mb-5 ${getColorBg()}`}>
-          <p className={`text-6xl font-medium mb-2 ${getColorScore()}`}>{porcentaje}%</p>
-          <p className="text-sm text-gray-600">{correctas} correctas de {total} preguntas</p>
-          <p className="text-xs text-gray-400 mt-1">
-            {porcentaje >= 80
-              ? '¡Excelente! Estás por encima de la meta.'
-              : porcentaje >= 60
-              ? 'Buen intento. Seguí practicando.'
-              : 'Hay que repasar. Vas a llegar.'}
-          </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <DarkModeToggle />
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-4">
-          <p className="text-sm font-medium text-gray-900 mb-4">Por especialidad</p>
-          <div className="flex flex-col gap-3">
-            {Object.entries(porArea).map(([area, { correctas: c, total: t }]) => {
+        {/* Score */}
+        <div style={{ textAlign: 'center', padding: '24px 0 20px' }}>
+          <p style={{ fontSize: 56, fontWeight: 500, color: getColor(porcentaje), margin: '0 0 8px' }}>{porcentaje}%</p>
+          <p style={{ fontSize: 13, color: d.text2, margin: '0 0 4px' }}>{correctas} correctas de {total} preguntas</p>
+          <p style={{ fontSize: 12, color: d.text3, margin: 0 }}>{getMensaje(porcentaje)}</p>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+          {[
+            { label: 'correctas', value: correctas, color: '#22c55e' },
+            { label: 'incorrectas', value: total - correctas, color: '#ef4444' },
+            { label: 'total', value: total, color: d.text1 },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 12, padding: 12, textAlign: 'center' }}>
+              <p style={{ fontSize: 11, color: d.text3, margin: '0 0 4px' }}>{label}</p>
+              <p style={{ fontSize: 20, fontWeight: 500, color, margin: 0 }}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Por especialidad */}
+        <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 16, padding: 20, marginBottom: 16 }}>
+          <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 16px' }}>Por especialidad</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {Object.entries(porEspecialidad).map(([esp, { correctas: c, total: t }]) => {
               const pct = Math.round((c / t) * 100)
-              const color = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-500' : 'bg-red-500'
               return (
-                <div key={area}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-gray-700">{area}</span>
-                    <span className="text-xs font-medium text-gray-900">{pct}% — {c}/{t}</span>
+                <div key={esp}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ fontSize: 12, color: d.text2 }}>{formatArea(esp)}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: getColor(pct) }}>{pct}% — {c}/{t}</span>
                   </div>
-                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                  <div style={{ height: 4, background: d.track, borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: getColor(pct), borderRadius: 99 }} />
                   </div>
                 </div>
               )
@@ -80,57 +177,42 @@ export default function SimulacroResult({ preguntas, respuestas, onNuevoSimulacr
           </div>
         </div>
 
+        {/* Errores */}
         {errores.length > 0 && (
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-4">
-            <p className="text-sm font-medium text-gray-900 mb-4">
+          <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 16, padding: 20, marginBottom: 16 }}>
+            <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 16px' }}>
               Preguntas falladas ({errores.length})
             </p>
-            <div className="flex flex-col gap-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {errores.map(({ pregunta, respuesta }) => {
                 const ci = correctaIdx(pregunta)
                 const ei = elegidaIdx(respuesta)
                 const { caso, pregunta: pText } = formatPregunta(pregunta.pregunta)
 
                 return (
-                  <div key={pregunta.id} className="border border-gray-100 rounded-xl overflow-hidden">
-
-                    <div className="p-4 bg-white">
-                      {caso && (
-                        <p className="text-xs text-gray-500 leading-relaxed mb-2">
-                          {caso}
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-900 font-medium leading-relaxed">
-                        {pText}
-                      </p>
+                  <div key={pregunta.id} style={{ border: `1px solid ${d.border}`, borderRadius: 12, overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 14px', background: d.card }}>
+                      {caso && <p style={{ fontSize: 11, color: d.text3, lineHeight: 1.6, marginBottom: 6 }}>{caso}</p>}
+                      <p style={{ fontSize: 12, fontWeight: 500, color: d.text1, lineHeight: 1.6, margin: 0 }}>{pText}</p>
                     </div>
 
                     {ei !== null && (
-                      <div className="bg-red-50 border-t border-red-100 px-4 py-3">
-                        <p className="text-[10px] font-semibold text-red-400 uppercase tracking-wide mb-1.5">
-                          Tu respuesta
-                        </p>
-                        <p className="text-xs font-medium text-red-700 mb-1.5">
-                          {LETRA[ei]} — {pregunta[OPCION_KEY[ei]]}
-                        </p>
-                        <p className="text-xs text-red-600 leading-relaxed">
-                          {pregunta[EXPLICACION_KEY[ei]]}
-                        </p>
+                      <div style={{ background: isDark ? 'rgba(239,68,68,0.08)' : '#fff5f5', borderTop: `1px solid ${isDark ? 'rgba(239,68,68,0.2)' : '#fecaca'}`, padding: '10px 14px' }}>
+                        <p style={{ fontSize: 10, fontWeight: 500, color: isDark ? '#f87171' : '#dc2626', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px' }}>Tu respuesta</p>
+                        <p style={{ fontSize: 11, fontWeight: 500, color: isDark ? '#fca5a5' : '#b91c1c', margin: '0 0 3px' }}>{LETRA[ei]} — {pregunta[OPCION_KEY[ei]]}</p>
+                        <p style={{ fontSize: 11, color: isDark ? '#fca5a5' : '#991b1b', lineHeight: 1.5, margin: 0 }}>{pregunta[EXPLICACION_KEY[ei]]}</p>
                       </div>
                     )}
 
-                    <div className="bg-green-50 border-t border-green-100 px-4 py-3">
-                      <p className="text-[10px] font-semibold text-green-500 uppercase tracking-wide mb-1.5">
-                        Respuesta correcta
-                      </p>
-                      <p className="text-xs font-medium text-green-700 mb-1.5">
-                        {LETRA[ci]} — {pregunta[OPCION_KEY[ci]]}
-                      </p>
-                      <p className="text-xs text-green-600 leading-relaxed">
-                        {pregunta[EXPLICACION_KEY[ci]]}
-                      </p>
+                    <div style={{ background: isDark ? 'rgba(34,197,94,0.08)' : '#f0fdf4', borderTop: `1px solid ${isDark ? 'rgba(34,197,94,0.2)' : '#86efac'}`, padding: '10px 14px' }}>
+                      <p style={{ fontSize: 10, fontWeight: 500, color: isDark ? '#4ade80' : '#16a34a', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px' }}>Respuesta correcta</p>
+                      <p style={{ fontSize: 11, fontWeight: 500, color: isDark ? '#86efac' : '#15803d', margin: '0 0 3px' }}>{LETRA[ci]} — {pregunta[OPCION_KEY[ci]]}</p>
+                      <p style={{ fontSize: 11, color: isDark ? '#86efac' : '#166534', lineHeight: 1.5, margin: 0 }}>{pregunta[EXPLICACION_KEY[ci]]}</p>
                     </div>
 
+                    <div style={{ padding: '8px 14px 12px', background: d.card, borderTop: `1px solid ${d.border}` }}>
+                      <ReporteInline pregunta={pregunta} d={d} />
+                    </div>
                   </div>
                 )
               })}
@@ -138,18 +220,19 @@ export default function SimulacroResult({ preguntas, respuestas, onNuevoSimulacr
           </div>
         )}
 
-        <div className="flex flex-col gap-3 pb-8">
+        {/* Botones */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 32 }}>
           {errores.length > 0 && (
             <button
               onClick={() => onRevisarErrores(errores.map(e => e.pregunta))}
-              className="w-full border border-black text-black rounded-xl py-3 text-sm font-medium hover:bg-black hover:text-white transition-colors"
+              style={{ width: '100%', border: `1px solid ${d.border2}`, background: 'transparent', color: d.text1, borderRadius: 12, padding: '12px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
             >
               Repasar errores ({errores.length})
             </button>
           )}
           <button
             onClick={onNuevoSimulacro}
-            className="w-full bg-black text-white rounded-xl py-3 text-sm font-medium hover:bg-gray-800 transition-colors"
+            style={{ width: '100%', background: d.btnBg, color: d.btnText, border: 'none', borderRadius: 12, padding: '12px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
           >
             Nuevo simulacro
           </button>
