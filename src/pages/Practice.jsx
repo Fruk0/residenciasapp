@@ -98,6 +98,7 @@ export default function Practice() {
   const { d, meta } = useTheme()
   const especialidadDecoded = especialidad ? decodeURIComponent(especialidad) : null
   const listaSubtemas = searchParams.get('lista')?.split(',').map(decodeURIComponent) || null
+  const idsDirectos = searchParams.get('ids')?.split(',') || null
   const cantidad = parseInt(searchParams.get('cantidad') || '10')
 
   const [preguntas, setPreguntas] = useState([])
@@ -115,11 +116,17 @@ export default function Practice() {
     setLoading(true); setError('')
     const { data: { user } } = await supabase.auth.getUser()
 
-    let query = supabase.from('questions').select('*').eq('estado', 'activo')
-    if (especialidadDecoded) query = query.eq('especialidad', especialidadDecoded)
-    if (listaSubtemas) query = query.in('subtema', listaSubtemas)
-
-    const { data: todasPreguntas } = await query.limit(1000)
+    let todasPreguntas = []
+    if (idsDirectos) {
+      const { data } = await supabase.from('questions').select('*').in('id', idsDirectos).eq('estado', 'activo')
+      todasPreguntas = data || []
+    } else {
+      let query = supabase.from('questions').select('*').eq('estado', 'activo')
+      if (especialidadDecoded && especialidadDecoded !== 'mixto') query = query.eq('especialidad', especialidadDecoded)
+      if (listaSubtemas) query = query.in('subtema', listaSubtemas)
+      const { data } = await query.limit(1000)
+      todasPreguntas = data || []
+    }
     if (!todasPreguntas?.length) { setError('No hay preguntas disponibles.'); setLoading(false); return }
 
     const { data: intentos } = await supabase
@@ -168,7 +175,7 @@ export default function Practice() {
       user_id: user.id,
       question_id: pregunta.id,
       es_correcta: esCorrecta,
-      modo: 'practica'
+      modo: modo === 'rapido' ? 'practica' : 'practica'
     })
     setRespuestas(prev => [...prev, {
       preguntaObj: pregunta, 
@@ -238,7 +245,7 @@ export default function Practice() {
           <div style={{ textAlign: 'center', padding: '24px 0 20px' }}>
             <p style={{ fontSize: 56, fontWeight: 500, color: getColor(pct), margin: '0 0 8px' }}>{pct}%</p>
             <p style={{ fontSize: 13, color: d.text2, margin: '0 0 4px' }}>
-              {correctasTotal} correctas de {total} preguntas{especialidadDecoded ? ` · ${formatArea(especialidadDecoded)}` : ''}
+              {correctasTotal} correctas de {total} preguntas{especialidadDecoded && especialidadDecoded !== 'mixto' ? ` · ${formatArea(especialidadDecoded)}` : ''}
             </p>
             <p style={{ fontSize: 12, color: d.text3, margin: 0 }}>{getMensaje(pct)}</p>
           </div>

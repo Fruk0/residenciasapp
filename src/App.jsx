@@ -14,6 +14,7 @@ import ProtectedAdmin from './components/ProtectedAdmin'
 import Landing from './pages/Landing'
 import Home from './pages/Home'
 import AreaSelector from './pages/AreaSelector'
+import Onboarding from './pages/Onboarding'
 
 async function checkBloqueado(userId) {
   const { data } = await supabase
@@ -72,6 +73,7 @@ export default function App() {
         <Route path="/dashboard" element={session ? <Dashboard /> : <Navigate to="/login" />} />
         <Route path="/profile" element={session ? <Profile /> : <Navigate to="/login" />} />
         <Route path="/admin" element={session ? <ProtectedAdmin><Admin /></ProtectedAdmin> : <Navigate to="/login" />} />
+        <Route path="/onboarding" element={session ? <Onboarding /> : <Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
   )

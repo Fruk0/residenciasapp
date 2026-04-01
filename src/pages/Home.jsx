@@ -14,6 +14,7 @@ export default function Home({ session }) {
   const [perfil, setPerfil] = useState(null)
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [lanzando, setLanzando] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => { cargar() }, [])
@@ -94,6 +95,21 @@ export default function Home({ session }) {
       setStats({ pctGlobal, total, correctasTotal, porEsp, espOrdenadas, comparativa, racha, sesiones, meta, peorSubtema, peorEsp })
     }
     setLoading(false)
+  }
+
+  const lanzarPreguntasRapidas = async () => {
+    setLanzando(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: intentos } = await supabase.from('attempts').select('question_id').eq('user_id', user.id)
+    const yaRespondidas = new Set((intentos || []).map(i => i.question_id))
+    const { data: preguntas } = await supabase.from('questions').select('id, especialidad').eq('estado', 'activo').limit(2000)
+    const noVistas = (preguntas || []).filter(p => !yaRespondidas.has(p.id))
+    const pool = noVistas.length >= 5 ? noVistas : preguntas || []
+    const seleccionadas = [...pool].sort(() => Math.random() - 0.5).slice(0, 5)
+    if (seleccionadas.length === 0) { setLanzando(false); return }
+    const ids = seleccionadas.map(p => p.id).join(',')
+    navigate(`/practice/modo/rapido/especialidad/mixto/run?ids=${ids}&cantidad=5`)
+    setLanzando(false)
   }
 
   const getColor = (pct, meta) => pct >= meta ? '#22c55e' : pct >= meta * 0.75 ? '#eab308' : '#ef4444'
@@ -200,6 +216,43 @@ export default function Home({ session }) {
           </div>
         )}
 
+        {/* Card 5 preguntas rápidas */}
+        <button
+          onClick={lanzarPreguntasRapidas}
+          disabled={lanzando}
+          style={{
+            width: '100%', marginBottom: 14, cursor: lanzando ? 'wait' : 'pointer',
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+            border: 'none', borderRadius: 18, padding: '14px 18px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 16, textAlign: 'left', position: 'relative', overflow: 'hidden'
+          }}
+        >
+          <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
+          <div style={{ position: 'absolute', bottom: -30, right: 60, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.02)' }} />
+          <div style={{ minWidth: 0, zIndex: 1 }}>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', margin: '0 0 4px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Modo rápido
+            </p>
+            <p style={{ fontSize: 18, fontWeight: 500, color: '#ffffff', margin: '0 0 4px' }}>
+              {lanzando ? 'Preparando...' : '5 preguntas rápidas'}
+            </p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: 0 }}>
+              Sin configurar, arrancás ya
+            </p>
+          </div>
+          <div style={{ flexShrink: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40 }}>
+            {lanzando ? (
+              <div style={{ width: 24, height: 24, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 40 40" fill="none" style={{ animation: 'float 2.5s ease-in-out infinite' }}>
+                <circle cx="20" cy="20" r="20" fill="rgba(255,255,255,0.07)"/>
+                <text x="20" y="26" textAnchor="middle" fontSize="18">⚡</text>
+              </svg>
+            )}
+          </div>
+        </button>
+
         {/* Acciones rápidas */}
         <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20, marginBottom: 14 }}>
           <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 14px' }}>Acciones rápidas</p>
@@ -207,15 +260,15 @@ export default function Home({ session }) {
 
             {/* CTA principal destacado */}
             <button
-              onClick={() => navigate('/practice')}
-              style={{ background: d.btnBg, border: 'none', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%', textAlign: 'left' }}
-            >
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 500, color: d.btnText, margin: '0 0 2px' }}>Practicar por tema</p>
-                <p style={{ fontSize: 11, color: d.btnText, opacity: 0.6, margin: 0 }}>Elegís especialidad y subtema</p>
-              </div>
-              <ChevronRight color={d.btnText} />
-            </button>
+            onClick={() => navigate('/practice')}
+            style={{ background: 'transparent', border: `1px solid ${d.border2}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+          >
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 500, color: d.text1, margin: '0 0 2px' }}>Practicar por tema</p>
+              <p style={{ fontSize: 11, color: d.text3, margin: 0 }}>Elegís especialidad y subtema</p>
+            </div>
+            <ChevronRight color={d.text3} />
+          </button>
 
             <button
               onClick={() => navigate('/simulacro')}
@@ -299,6 +352,15 @@ export default function Home({ session }) {
         </div>
 
       </div>
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-4px); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }

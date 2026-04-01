@@ -115,10 +115,13 @@ export default function Register() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-xl font-medium text-black mb-2">Cuenta creada.</h2>
-          <p className="text-sm text-gray-400 mb-8">Ya podés ingresar con tu email y contraseña.</p>
-          <Link to="/login" className="text-sm text-black font-medium underline underline-offset-4 hover:text-gray-600 transition-colors">
-            Ir al login
+          <h2 className="text-xl font-medium text-black mb-2">¡Bienvenido/a!</h2>
+          <p className="text-sm text-gray-400 mb-8">Tu cuenta fue creada. Antes de empezar, configuremos tu perfil.</p>
+          <Link
+            to="/login?onboarding=true"
+            className="inline-block w-full bg-black text-white rounded-lg py-2.5 text-sm font-medium text-center hover:bg-gray-800 transition-colors"
+          >
+            Configurar perfil
           </Link>
         </div>
       </AuthLayout>
