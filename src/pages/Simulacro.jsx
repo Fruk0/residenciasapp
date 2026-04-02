@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useTheme } from '../hooks/useTheme'
 import SimulacroSetup from '../components/SimulacroSetup'
 import SimulacroResult from '../components/SimulacroResult'
 import QuestionPlayer from '../components/QuestionPlayer'
 import { seleccionarPreguntas } from '../hooks/useSimulacro'
 
 export default function Simulacro() {
+  const { d } = useTheme()
   const [estado, setEstado] = useState('setup')
   const [config, setConfig] = useState(null)
   const [preguntas, setPreguntas] = useState([])
@@ -20,16 +22,8 @@ export default function Simulacro() {
   const handleIniciar = async (cfg) => {
     setLoading(true)
     setConfig(cfg)
-    const seleccionadas = await seleccionarPreguntas({
-      areas: cfg.areas,
-      totalPreguntas: cfg.cantidad
-    })
-
-    if (seleccionadas.length === 0) {
-      setLoading(false)
-      return
-    }
-
+    const seleccionadas = await seleccionarPreguntas({ areas: cfg.areas, totalPreguntas: cfg.cantidad })
+    if (seleccionadas.length === 0) { setLoading(false); return }
     setPreguntas(seleccionadas)
     setActual(0)
     setRespuestas([])
@@ -43,10 +37,7 @@ export default function Simulacro() {
     setSegundosRestantes(cfg.segundosPorPregunta)
     const interval = setInterval(() => {
       setSegundosRestantes(prev => {
-        if (prev <= 1) {
-          clearInterval(interval)
-          return 0
-        }
+        if (prev <= 1) { clearInterval(interval); return 0 }
         return prev - 1
       })
     }, 1000)
@@ -55,97 +46,81 @@ export default function Simulacro() {
 
   const handleResponder = async (esCorrecta, respuestaDada) => {
     const { data: { user } } = await supabase.auth.getUser()
-    const preguntaActual = preguntas[actual]
-
     await supabase.from('attempts').insert({
       user_id: user.id,
-      question_id: preguntaActual.id,
+      question_id: preguntas[actual].id,
       es_correcta: esCorrecta,
       modo: 'simulacro'
     })
-
     setRespuestas(prev => [...prev, { esCorrecta, respuestaDada }])
   }
 
   const handleSiguiente = () => {
     if (timerInterval) clearInterval(timerInterval)
-
-    if (actual + 1 >= preguntas.length) {
-      setEstado('result')
-      return
-    }
-
+    if (actual + 1 >= preguntas.length) { setEstado('result'); return }
     setActual(prev => prev + 1)
     if (config?.timerActivo) iniciarTimer(config)
   }
 
   const handleNuevoSimulacro = () => {
     if (timerInterval) clearInterval(timerInterval)
-    setEstado('setup')
-    setPreguntas([])
-    setRespuestas([])
-    setActual(0)
-    setSegundosRestantes(null)
+    setEstado('setup'); setPreguntas([]); setRespuestas([]); setActual(0); setSegundosRestantes(null)
   }
 
   const handleRevisarErrores = (preguntasErradas) => {
     if (timerInterval) clearInterval(timerInterval)
-    setPreguntas(preguntasErradas)
-    setActual(0)
-    setRespuestas([])
+    setPreguntas(preguntasErradas); setActual(0); setRespuestas([])
     setConfig(prev => ({ ...prev, timerActivo: false }))
     setEstado('jugando')
   }
 
-  const formatTimer = (seg) => {
-    const m = Math.floor(seg / 60)
-    const s = seg % 60
-    return `${m}:${s.toString().padStart(2, '0')}`
-  }
+  const formatTimer = (seg) => `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
+  if (loading) return (
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: d.bg }}>
+      <div style={{ width: 24, height: 24, border: `2px solid ${d.text1}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
 
-  if (estado === 'setup') {
-    return <SimulacroSetup onIniciar={handleIniciar} onVolver={() => navigate('/')} />
-  }
+  if (estado === 'setup') return <SimulacroSetup onIniciar={handleIniciar} onVolver={() => navigate('/')} />
+  if (estado === 'result') return (
+    <SimulacroResult
+      preguntas={preguntas}
+      respuestas={respuestas}
+      onNuevoSimulacro={handleNuevoSimulacro}
+      onRevisarErrores={handleRevisarErrores}
+    />
+  )
 
-  if (estado === 'result') {
-    return (
-      <SimulacroResult
-        preguntas={preguntas}
-        respuestas={respuestas}
-        onNuevoSimulacro={handleNuevoSimulacro}
-        onRevisarErrores={handleRevisarErrores}
-      />
-    )
-  }
+  const timerUrgente = segundosRestantes !== null && segundosRestantes <= 15
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-6">
+    <div style={{ minHeight: '100dvh', background: d.bg, padding: '32px 16px', transition: 'background 0.2s' }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <div style={{ maxWidth: 520, margin: '0 auto' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <button
             onClick={() => { if (timerInterval) clearInterval(timerInterval); setEstado('setup') }}
-            className="text-xs text-gray-400 hover:text-black transition-colors underline underline-offset-4"
+            style={{ fontSize: 12, color: d.text3, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
           >
             Abandonar
           </button>
+
           {config?.timerActivo && segundosRestantes !== null && (
-            <div className={`text-sm font-medium tabular-nums px-3 py-1 rounded-lg ${
-              segundosRestantes <= 15
-                ? 'text-red-500 bg-red-50'
-                : 'text-gray-500 bg-gray-100'
-            }`}>
+            <div style={{
+              fontSize: 14, fontWeight: 500, padding: '5px 14px', borderRadius: 10,
+              fontVariantNumeric: 'tabular-nums',
+              background: timerUrgente ? (d.isDark ? 'rgba(239,68,68,0.15)' : '#fff5f5') : d.card2,
+              color: timerUrgente ? '#ef4444' : d.text2,
+              border: `1px solid ${timerUrgente ? 'rgba(239,68,68,0.3)' : d.border}`
+            }}>
               {formatTimer(segundosRestantes)}
             </div>
           )}
-          <span className="text-xs text-gray-400">Simulacro</span>
+
+          <span style={{ fontSize: 12, color: d.text3 }}>Simulacro</span>
         </div>
 
         <QuestionPlayer

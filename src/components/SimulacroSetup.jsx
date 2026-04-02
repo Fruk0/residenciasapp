@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useTemasActivos } from '../hooks/useTemasActivos'
 import TemasActivos from './TemasActivos'
+import { useTheme } from '../hooks/useTheme'
+import { formatArea } from '../lib/formatArea'
 
 const OPCIONES_CANTIDAD = [10, 20, 30, 50]
 
 export default function SimulacroSetup({ onIniciar, onVolver }) {
+  const { d } = useTheme()
   const { temasActivos, loading, cargar } = useTemasActivos()
   const [areasSeleccionadas, setAreasSeleccionadas] = useState(null)
   const [cantidad, setCantidad] = useState(20)
@@ -32,70 +35,68 @@ export default function SimulacroSetup({ onIniciar, onVolver }) {
     onIniciar({ areas, cantidad, timerActivo, segundosPorPregunta: 90 })
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
+  if (loading) return (
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: d.bg }}>
+      <div style={{ width: 24, height: 24, border: `2px solid ${d.text1}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  )
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 px-4 py-8">
-        <div className="max-w-lg mx-auto">
+      <div style={{ minHeight: '100dvh', background: d.bg, padding: '32px 16px', transition: 'background 0.2s' }}>
+        <div style={{ maxWidth: 520, margin: '0 auto' }}>
 
           <button
             onClick={onVolver}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-black transition-colors mb-6"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: d.text3, background: 'none', border: 'none', cursor: 'pointer', marginBottom: 24 }}
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="m15 18-6-6 6-6" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m15 18-6-6 6-6"/>
             </svg>
             Inicio
           </button>
 
-          <h1 className="text-2xl font-medium text-gray-900 mb-1">Simulacro.</h1>
-          <p className="text-sm text-gray-400 mb-8">Configurá tu examen personalizado.</p>
+          <h1 style={{ fontSize: 22, fontWeight: 500, color: d.text1, margin: '0 0 4px' }}>Simulacro.</h1>
+          <p style={{ fontSize: 13, color: d.text3, margin: '0 0 28px' }}>Configurá tu examen personalizado.</p>
 
-          <div className="flex flex-col gap-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-            <div className="bg-white border border-gray-100 rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-medium text-gray-900">Especialidades</p>
+            {/* Especialidades */}
+            <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: 0 }}>Especialidades</p>
                 <button
                   onClick={() => setMostrarTemasActivos(true)}
-                  className="text-xs text-gray-400 underline underline-offset-4 hover:text-black transition-colors"
+                  style={{ fontSize: 12, color: d.text3, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
                 >
                   Editar mis temas
                 </button>
               </div>
 
               {temasActivos.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-sm text-gray-400 mb-3">No tenés temas activos todavía.</p>
-                  <button
-                    onClick={() => setMostrarTemasActivos(true)}
-                    className="text-sm text-black font-medium underline underline-offset-4"
-                  >
+                <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                  <p style={{ fontSize: 13, color: d.text3, marginBottom: 10 }}>No tenés temas activos todavía.</p>
+                  <button onClick={() => setMostrarTemasActivos(true)} style={{ fontSize: 13, color: d.text1, fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
                     Activar temas
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {temasActivos.map(area => {
-                    const seleccionada = areas.includes(area)
+                    const sel = areas.includes(area)
                     return (
                       <button
                         key={area}
                         onClick={() => toggleArea(area)}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-colors border ${
-                          seleccionada
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'
-                        }`}
+                        style={{
+                          padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500,
+                          cursor: 'pointer', transition: 'all 0.15s',
+                          background: sel ? d.btnBg : 'transparent',
+                          color: sel ? d.btnText : d.text3,
+                          border: `1px solid ${sel ? d.btnBg : d.border2}`
+                        }}
                       >
-                        {area}
+                        {formatArea(area)}
                       </button>
                     )
                   })}
@@ -103,18 +104,21 @@ export default function SimulacroSetup({ onIniciar, onVolver }) {
               )}
             </div>
 
-            <div className="bg-white border border-gray-100 rounded-2xl p-5">
-              <p className="text-sm font-medium text-gray-900 mb-4">Cantidad de preguntas</p>
-              <div className="grid grid-cols-4 gap-2">
+            {/* Cantidad */}
+            <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 14px' }}>Cantidad de preguntas</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                 {OPCIONES_CANTIDAD.map(n => (
                   <button
                     key={n}
                     onClick={() => setCantidad(n)}
-                    className={`py-3 rounded-xl text-sm font-medium transition-colors border ${
-                      cantidad === n
-                        ? 'bg-black text-white border-black'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                    }`}
+                    style={{
+                      padding: '12px 0', fontSize: 13, fontWeight: 500, borderRadius: 12,
+                      cursor: 'pointer', transition: 'all 0.15s',
+                      background: cantidad === n ? d.btnBg : 'transparent',
+                      color: cantidad === n ? d.btnText : d.text2,
+                      border: `1px solid ${cantidad === n ? d.btnBg : d.border2}`
+                    }}
                   >
                     {n}
                   </button>
@@ -122,38 +126,50 @@ export default function SimulacroSetup({ onIniciar, onVolver }) {
               </div>
             </div>
 
-            <div className="bg-white border border-gray-100 rounded-2xl p-5">
-              <div className="flex items-center justify-between">
+            {/* Timer */}
+            <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Timer</p>
-                  <p className="text-xs text-gray-400 mt-0.5">1.5 minutos por pregunta</p>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: d.text1, margin: '0 0 3px' }}>Timer</p>
+                  <p style={{ fontSize: 11, color: d.text3, margin: 0 }}>1.5 minutos por pregunta</p>
                 </div>
                 <button
                   onClick={() => setTimerActivo(!timerActivo)}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${
-                    timerActivo ? 'bg-black' : 'bg-gray-200'
-                  }`}
+                  style={{
+                    width: 48, height: 26, borderRadius: 99, border: 'none', cursor: 'pointer',
+                    background: timerActivo ? d.btnBg : d.track,
+                    position: 'relative', transition: 'background 0.2s', flexShrink: 0
+                  }}
                 >
-                  <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${
-                    timerActivo ? 'left-6' : 'left-0.5'
-                  }`} />
+                  <div style={{
+                    width: 20, height: 20, background: '#ffffff', borderRadius: '50%',
+                    position: 'absolute', top: 3,
+                    left: timerActivo ? 25 : 3,
+                    transition: 'left 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                  }} />
                 </button>
               </div>
             </div>
 
-            <div className="bg-white border border-gray-100 rounded-2xl p-4">
-              <p className="text-xs text-gray-400 text-center">
+            {/* Resumen */}
+            <div style={{ background: d.card2, border: `1px solid ${d.border}`, borderRadius: 14, padding: '12px 16px', textAlign: 'center' }}>
+              <p style={{ fontSize: 12, color: d.text3, margin: 0 }}>
                 {areas.length > 0
                   ? `${areas.length} especialidad${areas.length > 1 ? 'es' : ''} · ${cantidad} preguntas${timerActivo ? ` · ${Math.round(cantidad * 1.5)} min máx` : ''}`
-                  : 'Seleccioná al menos una especialidad'
-                }
+                  : 'Seleccioná al menos una especialidad'}
               </p>
             </div>
 
             <button
               onClick={handleIniciar}
               disabled={areas.length === 0}
-              className="w-full bg-black text-white rounded-xl py-3.5 text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                width: '100%', background: d.btnBg, color: d.btnText, border: 'none',
+                borderRadius: 14, padding: '14px 0', fontSize: 14, fontWeight: 500,
+                cursor: areas.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: areas.length === 0 ? 0.4 : 1, transition: 'opacity 0.2s'
+              }}
             >
               Iniciar simulacro
             </button>
@@ -162,9 +178,7 @@ export default function SimulacroSetup({ onIniciar, onVolver }) {
         </div>
       </div>
 
-      {mostrarTemasActivos && (
-        <TemasActivos onCerrar={handleCerrarTemas} />
-      )}
+      {mostrarTemasActivos && <TemasActivos onCerrar={handleCerrarTemas} />}
     </>
   )
 }
