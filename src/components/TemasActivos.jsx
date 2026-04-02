@@ -2,78 +2,88 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTemasActivos } from '../hooks/useTemasActivos'
 import { formatArea } from '../lib/formatArea'
+import { useTheme } from '../hooks/useTheme'
 
 export default function TemasActivos({ onCerrar }) {
-  const [todasAreas, setTodasAreas] = useState([])
-  const [loadingAreas, setLoadingAreas] = useState(true)
+  const { d } = useTheme()
+  const [todasEspecialidades, setTodasEspecialidades] = useState([])
+  const [loadingEsp, setLoadingEsp] = useState(true)
   const { temasActivos, loading, toggle } = useTemasActivos()
 
-  useEffect(() => {
-    cargarAreas()
-  }, [])
+  useEffect(() => { cargarEspecialidades() }, [])
 
-  const cargarAreas = async () => {
+  const cargarEspecialidades = async () => {
     const { data } = await supabase
       .from('questions')
-      .select('area')
+      .select('especialidad')
       .eq('estado', 'activo')
-      .limit(1000)
+      .limit(2000)
 
     if (data) {
-      const unicas = [...new Set(data.map(d => d.area))].sort()
-      setTodasAreas(unicas)
+      const unicas = [...new Set(data.map(d => d.especialidad).filter(Boolean))].sort()
+      setTodasEspecialidades(unicas)
     }
-    setLoadingAreas(false)
+    setLoadingEsp(false)
   }
 
-  if (loading || loadingAreas) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-        <div className="absolute inset-0 bg-black/40" onClick={onCerrar} />
-        <div className="relative w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl p-8 flex items-center justify-center z-10">
-          <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
-        </div>
+  if (loading || loadingEsp) return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} onClick={onCerrar} />
+      <div style={{ position: 'relative', width: '100%', maxWidth: 560, background: d.card, borderRadius: '20px 20px 0 0', padding: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+        <div style={{ width: 24, height: 24, border: `2px solid ${d.text1}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
-    )
-  }
+    </div>
+  )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onCerrar} />
-      <div className="relative w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl max-h-[85vh] overflow-y-auto z-10">
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} onClick={onCerrar} />
+      <div style={{
+        position: 'relative', width: '100%', maxWidth: 560,
+        background: d.card, borderRadius: '20px 20px 0 0',
+        maxHeight: '85vh', overflowY: 'auto', zIndex: 10
+      }}>
 
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
+        {/* Header */}
+        <div style={{
+          position: 'sticky', top: 0, background: d.card,
+          borderBottom: `1px solid ${d.border}`,
+          padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+        }}>
           <div>
-            <p className="text-sm font-medium text-gray-900">Mis temas activos</p>
-            <p className="text-xs text-gray-400 mt-0.5">Tildá los temas que ya estudiaste</p>
+            <p style={{ fontSize: 14, fontWeight: 500, color: d.text1, margin: '0 0 2px' }}>Mis temas activos</p>
+            <p style={{ fontSize: 11, color: d.text3, margin: 0 }}>Tildá los temas que ya estudiaste</p>
           </div>
           <button
             onClick={onCerrar}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-black text-sm"
+            style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${d.border2}`, background: 'transparent', cursor: 'pointer', color: d.text3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}
           >
             ✕
           </button>
         </div>
 
-        <div className="px-5 py-4">
-          <p className="text-xs text-gray-400 mb-4">
-            {temasActivos.length} de {todasAreas.length} temas activos
+        {/* Contenido */}
+        <div style={{ padding: '16px 20px 28px' }}>
+          <p style={{ fontSize: 11, color: d.text3, margin: '0 0 14px' }}>
+            {temasActivos.length} de {todasEspecialidades.length} temas activos
           </p>
 
-          <div className="flex flex-wrap gap-2 mb-6">
-            {todasAreas.map(area => {
-              const activo = temasActivos.includes(area)
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+            {todasEspecialidades.map(esp => {
+              const activo = temasActivos.includes(esp)
               return (
                 <button
-                  key={formatArea(area)}
-                  onClick={() => toggle(area)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-colors border ${
-                    activo
-                      ? 'bg-black text-white border-black'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                  }`}
+                  key={esp}
+                  onClick={() => toggle(esp)}
+                  style={{
+                    padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 500,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                    background: activo ? d.btnBg : 'transparent',
+                    color: activo ? d.btnText : d.text2,
+                    border: `1px solid ${activo ? d.btnBg : d.border2}`
+                  }}
                 >
-                  {formatArea(area)}
+                  {formatArea(esp)}
                 </button>
               )
             })}
@@ -81,7 +91,7 @@ export default function TemasActivos({ onCerrar }) {
 
           <button
             onClick={onCerrar}
-            className="w-full bg-black text-white rounded-xl py-3 text-sm font-medium hover:bg-gray-800 transition-colors"
+            style={{ width: '100%', background: d.btnBg, color: d.btnText, border: 'none', borderRadius: 12, padding: '13px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
           >
             Listo
           </button>
