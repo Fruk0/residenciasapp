@@ -58,6 +58,16 @@ export default function SubtopicSelector() {
     prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
   )
 
+  const todosSeleccionados = subtemas.length > 0 && subtemas.every(s => seleccionados.includes(s.subtema))
+
+  const toggleTodos = () => {
+    if (todosSeleccionados) {
+      setSeleccionados([])
+    } else {
+      setSeleccionados(subtemas.map(s => s.subtema))
+    }
+  }
+
   const handleIniciar = () => {
     if (seleccionados.length === 0) return
     const lista = seleccionados.map(encodeURIComponent).join(',')
@@ -101,7 +111,28 @@ export default function SubtopicSelector() {
         ) : (
           <>
             <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20, marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: d.text3, margin: '0 0 12px' }}>Subtemas</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <p style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: d.text3, margin: 0 }}>Subtemas</p>
+                <button
+                  onClick={toggleTodos}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: todosSeleccionados ? d.text1 : d.text3, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  <div style={{
+                    width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                    border: `1.5px solid ${todosSeleccionados ? d.text2 : d.border2}`,
+                    background: todosSeleccionados ? d.text2 : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s'
+                  }}>
+                    {todosSeleccionados && (
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={d.bg} strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    )}
+                  </div>
+                  {todosSeleccionados ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                </button>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {subtemas.map(({ subtema, pct }) => {
                   const sel = seleccionados.includes(subtema)

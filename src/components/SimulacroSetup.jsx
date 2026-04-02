@@ -61,6 +61,7 @@ export default function SimulacroSetup({ onIniciar, onVolver }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
+
             {/* Especialidades */}
             <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
