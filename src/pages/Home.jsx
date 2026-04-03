@@ -27,6 +27,11 @@ export default function Home({ session }) {
     const { data: preguntas } = await supabase.from('questions').select('id, especialidad, area').eq('estado', 'activo').limit(2000)
     setPerfil(userData)
 
+    if (!userData?.fecha_examen && !userData?.meta_aciertos) {
+      navigate('/onboarding')
+      return
+    }
+
     if (intentos && preguntas) {
       const meta = userData?.meta_aciertos || 80
       const espPorId = {}
@@ -92,7 +97,24 @@ export default function Home({ session }) {
         .map(([esp, { correctas, total }]) => ({ esp, pct: Math.round((correctas / total) * 100), total }))
         .sort((a, b) => b.pct - a.pct)
 
-      setStats({ pctGlobal, total, correctasTotal, porEsp, espOrdenadas, comparativa, racha, sesiones, meta, peorSubtema, peorEsp })
+      // Temas olvidados: especialidades practicadas pero no vistas hace >7 días
+      const hace7dias = new Date(hoy); hace7dias.setDate(hoy.getDate() - 7)
+      const ultimaVezPorEsp = {}
+      intentos.forEach(({ question_id, timestamp }) => {
+        const esp = espPorId[question_id]; if (!esp) return
+        const t = new Date(timestamp)
+        if (!ultimaVezPorEsp[esp] || t > ultimaVezPorEsp[esp]) ultimaVezPorEsp[esp] = t
+      })
+      const temasOlvidados = Object.entries(ultimaVezPorEsp)
+        .filter(([, fecha]) => fecha < hace7dias)
+        .sort((a, b) => a[1] - b[1])
+        .slice(0, 3)
+        .map(([esp, fecha]) => {
+          const diasSinVer = Math.floor((hoy - fecha) / 86400000)
+          return { esp, diasSinVer }
+        })
+
+      setStats({ pctGlobal, total, correctasTotal, porEsp, espOrdenadas, comparativa, racha, sesiones, meta, peorSubtema, peorEsp, temasOlvidados })
     }
     setLoading(false)
   }
@@ -187,43 +209,17 @@ export default function Home({ session }) {
           </div>
         )}
 
-        {/* Insight accionable — subtema más fallado esta semana */}
-        {stats?.peorSubtema && (
-          <div style={{
-            background: isDark ? 'rgba(239,68,68,0.06)' : '#fff8f8',
-            border: `1px solid ${isDark ? 'rgba(239,68,68,0.2)' : '#fecaca'}`,
-            borderRadius: 14, padding: '14px 16px', marginBottom: 16,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12
-          }}>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 11, color: isDark ? '#f87171' : '#dc2626', margin: '0 0 3px', fontWeight: 500 }}>Esta semana fallaste más en</p>
-              <p style={{ fontSize: 14, fontWeight: 500, color: d.text1, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {formatArea(stats.peorSubtema.nombre)}
-              </p>
-              <p style={{ fontSize: 11, color: d.text3, margin: 0 }}>{stats.peorSubtema.count} {stats.peorSubtema.count === 1 ? 'error' : 'errores'} esta semana</p>
-            </div>
-            <button
-              onClick={() => navigate(`/practice/modo/errores`)}
-              style={{
-                flexShrink: 0, fontSize: 12, fontWeight: 500,
-                background: isDark ? 'rgba(239,68,68,0.15)' : '#fee2e2',
-                color: isDark ? '#f87171' : '#dc2626',
-                border: 'none', borderRadius: 10, padding: '8px 14px', cursor: 'pointer', whiteSpace: 'nowrap'
-              }}
-            >
-              Repasar ahora
-            </button>
-          </div>
-        )}
+        {/* 3 cards de acción rápida */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
 
-        {/* Card 5 preguntas rápidas */}
+        {/* Card 5 preguntas rápidas — amarilla */}
         <button
           onClick={lanzarPreguntasRapidas}
           disabled={lanzando}
           style={{
             width: '100%', marginBottom: 14, cursor: lanzando ? 'wait' : 'pointer',
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-            border: 'none', borderRadius: 18, padding: '14px 18px',
+            background: 'linear-gradient(135deg, #78350f 0%, #92400e 50%, #b45309 100%)',
+            border: 'none', borderRadius: 18, padding: '10px 14px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             gap: 16, textAlign: 'left', position: 'relative', overflow: 'hidden'
           }}
@@ -245,13 +241,88 @@ export default function Home({ session }) {
             {lanzando ? (
               <div style={{ width: 24, height: 24, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             ) : (
-              <svg width="32" height="32" viewBox="0 0 40 40" fill="none" style={{ animation: 'float 2.5s ease-in-out infinite' }}>
-                <circle cx="20" cy="20" r="20" fill="rgba(255,255,255,0.07)"/>
-                <text x="20" y="26" textAnchor="middle" fontSize="18">⚡</text>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ animation: 'float 2.5s ease-in-out infinite' }}>
+                <polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill="#FCD34D" stroke="#F59E0B" strokeWidth="1" strokeLinejoin="round"/>
               </svg>
             )}
           </div>
         </button>
+
+        {/* Card temas olvidados — violeta */}
+        {stats?.temasOlvidados?.length > 0 && (
+          <button
+            onClick={() => navigate('/practice')}
+            style={{
+              width: '100%', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #2e1065 0%, #3b0764 50%, #4c1d95 100%)',
+              border: 'none', borderRadius: 18, padding: '14px 18px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 16, textAlign: 'left', position: 'relative', overflow: 'hidden'
+            }}
+          >
+            <div style={{ position: 'absolute', top: -15, right: -15, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+            <div style={{ minWidth: 0, zIndex: 1 }}>
+              <p style={{ fontSize: 11, color: 'rgba(196,181,253,0.7)', margin: '0 0 4px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Repaso pendiente
+              </p>
+              <p style={{ fontSize: 13, fontWeight: 500, color: '#ffffff', margin: '0 0 3px' }}>
+                Temas sin repasar
+              </p>
+              <p style={{ fontSize: 11, color: 'rgba(196,181,253,0.6)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {stats.temasOlvidados.map(t => formatArea(t.esp)).join(', ')} · hace +{stats.temasOlvidados[0].diasSinVer}d
+              </p>
+            </div>
+            <div style={{ flexShrink: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40 }}>
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ animation: 'float 3s ease-in-out infinite' }}>
+                <circle cx="16" cy="16" r="16" fill="rgba(167,139,250,0.15)"/>
+                <circle cx="16" cy="16" r="9" fill="none" stroke="#a78bfa" strokeWidth="2"/>
+                <circle cx="16" cy="16" r="2" fill="#a78bfa"/>
+                <line x1="16" y1="7" x2="16" y2="16" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="16" y1="16" x2="21" y2="13" stroke="#c4b5fd" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle cx="16" cy="8" r="1" fill="#7c3aed"/>
+                <circle cx="22" cy="11" r="1" fill="#7c3aed"/>
+                <circle cx="24" cy="17" r="1" fill="#7c3aed"/>
+              </svg>
+            </div>
+          </button>
+        )}
+
+        {/* Card errores semana — roja */}
+        {stats?.peorSubtema && (
+          <button
+            onClick={() => navigate('/practice/modo/errores')}
+            style={{
+              width: '100%', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #450a0a 0%, #7f1d1d 50%, #991b1b 100%)',
+              border: 'none', borderRadius: 18, padding: '14px 18px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 16, textAlign: 'left', position: 'relative', overflow: 'hidden'
+            }}
+          >
+            <div style={{ position: 'absolute', top: -15, right: -15, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
+            <div style={{ minWidth: 0, zIndex: 1 }}>
+              <p style={{ fontSize: 11, color: 'rgba(252,165,165,0.7)', margin: '0 0 4px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Esta semana fallaste más en
+              </p>
+              <p style={{ fontSize: 16, fontWeight: 500, color: '#ffffff', margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {formatArea(stats.peorSubtema.nombre)}
+              </p>
+              <p style={{ fontSize: 11, color: 'rgba(252,165,165,0.6)', margin: 0 }}>
+                {stats.peorSubtema.count} {stats.peorSubtema.count === 1 ? 'error' : 'errores'} · Repasar ahora
+              </p>
+            </div>
+            <div style={{ flexShrink: 0, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40 }}>
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ animation: 'float 2s ease-in-out infinite' }}>
+                <circle cx="16" cy="16" r="16" fill="rgba(239,68,68,0.15)"/>
+                <path d="M16 9v8" stroke="#fca5a5" strokeWidth="2.5" strokeLinecap="round"/>
+                <circle cx="16" cy="21" r="1.5" fill="#fca5a5"/>
+                <path d="M8 26 L16 7 L24 26" fill="none" stroke="#f87171" strokeWidth="2" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </button>
+        )}
+
+        </div>
 
         {/* Acciones rápidas */}
         <div style={{ background: d.card, border: `1px solid ${d.border}`, borderRadius: 18, padding: 20, marginBottom: 14 }}>

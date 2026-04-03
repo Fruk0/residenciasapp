@@ -98,6 +98,10 @@ export default function Login() {
           {loading ? 'Ingresando...' : 'Ingresar'}
         </button>
 
+      <p className="text-center text-xs text-gray-400 mt-2">
+          ¿No tenés cuenta?{' '}
+          <Link to="/register?invite=RESIDENCIAS2026" className="text-black font-medium hover:underline underline-offset-4">Registrate</Link>
+        </p>
       </form>
     </AuthLayout>
   )

@@ -3,6 +3,9 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import AuthLayout from '../components/AuthLayout'
 
+const CODIGO_PUBLICO = 'RESIDENCIAS2026'
+const LIMITE_USUARIOS = 60
+
 export default function Register() {
   const [searchParams] = useSearchParams()
   const inviteCode = searchParams.get('invite')
@@ -15,6 +18,7 @@ export default function Register() {
   const [validandoInvite, setValidandoInvite] = useState(true)
   const [inviteValido, setInviteValido] = useState(false)
   const [inviteData, setInviteData] = useState(null)
+  const [esCodigoPublico, setEsCodigoPublico] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
@@ -22,6 +26,23 @@ export default function Register() {
 
   const validarInvite = async () => {
     if (!inviteCode) { setInviteValido(false); setValidandoInvite(false); return }
+
+    // Código público — verificar que no se llegó al límite
+    if (inviteCode === CODIGO_PUBLICO) {
+      const { count } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+      if (count < LIMITE_USUARIOS) {
+        setEsCodigoPublico(true)
+        setInviteValido(true)
+      } else {
+        setInviteValido(false)
+      }
+      setValidandoInvite(false)
+      return
+    }
+
+    // Código individual — comportamiento normal
     const { data } = await supabase
       .from('invitations')
       .select('id, activo, usado_por, email_destinatario')
@@ -43,11 +64,23 @@ export default function Register() {
       return
     }
 
-    if (inviteData?.email_destinatario &&
+    if (!esCodigoPublico && inviteData?.email_destinatario &&
       email.toLowerCase() !== inviteData.email_destinatario.toLowerCase()) {
       setError('Invitación inválida.')
       setLoading(false)
       return
+    }
+
+    // Verificar límite justo antes de registrar (race condition)
+    if (esCodigoPublico) {
+      const { count } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+      if (count >= LIMITE_USUARIOS) {
+        setError('El acceso beta está completo. Seguinos para más novedades.')
+        setLoading(false)
+        return
+      }
     }
 
     const { data, error: signUpError } = await supabase.auth.signUp({
@@ -63,13 +96,15 @@ export default function Register() {
     }
 
     const userId = data.user.id
-
     await supabase.from('users').update({ nombre }).eq('id', userId)
 
-    await supabase.rpc('marcar_invitacion_usada', {
-      p_invite_id: inviteData.id,
-      p_user_id: userId
-    })
+    // Solo marcar invitación si es individual
+    if (!esCodigoPublico && inviteData?.id) {
+      await supabase.rpc('marcar_invitacion_usada', {
+        p_invite_id: inviteData.id,
+        p_user_id: userId
+      })
+    }
 
     setSuccess(true)
     setLoading(false)
