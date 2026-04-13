@@ -60,7 +60,7 @@
 
 /* ── STATS ── */
 .lw .stats-strip { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 32px 5%; background: var(--white); }
-.lw .stats-in { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-around; gap: 32px; flex-wrap: wrap; }
+.lw .stats-in { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-around; gap: 22px; flex-wrap: wrap; }
 .lw .stat-item { text-align: center; }
 .lw .stat-num { font-size: 28px; font-weight: 900; color: var(--black); letter-spacing: -1px; line-height: 1; }
 .lw .stat-num--sm { font-size: 18px; letter-spacing: -.5px; }
