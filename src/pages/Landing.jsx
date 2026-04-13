@@ -129,7 +129,7 @@ export default function Landing() {
           <div className="stat-div"></div>
           <div className="stat-item">
             <div className="stat-num stat-num--sm">Rendimiento</div>
-            <div className="stat-label">real por especialidad, no global</div>
+            <div className="stat-label">real por especialidad</div>
           </div>
           <div className="stat-div"></div>
           <div className="stat-item">
