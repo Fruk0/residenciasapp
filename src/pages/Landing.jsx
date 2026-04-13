@@ -67,48 +67,59 @@ export default function Landing() {
   return (
     <div className="lw">
 
+      {/* ── TOP BAR ──
+          Original: "Preguntas basadas en exámenes reales y bibliografía oficial argentina."
+          Problema: genérico, no especifica qué hace esa bibliografía por el usuario.
+          Mejora: concreto, orientado a resultado. */}
       <div className="ann">
-        Preguntas basadas en exámenes reales y bibliografía oficial argentina.
-        <a href="#" onClick={go}>Empezar gratis →</a>
+        Preguntas del nivel real del Examen Único, con fuente oficial en cada respuesta.
+        <a href="#" onClick={go}>Registrarse →</a>
       </div>
 
       <nav className="l-nav">
         <div className="nav-in">
           <a href="#" className="logo">Residencias<span>App</span></a>
           <div className="nav-links">
-            <a href="#features">Características</a>
+            <a href="#features">Qué incluye</a>
             <a href="#especialidades">Especialidades</a>
             <a href="#como">Cómo funciona</a>
           </div>
           <div className="nav-r">
             <a href="#" onClick={goLogin} className="btn-ghost">Entrar</a>
-            <a href="#" onClick={go} className="btn-dark">Empezar gratis ›</a>
+            <a href="#" onClick={go} className="btn-dark">Registrarse ›</a>
           </div>
         </div>
       </nav>
 
+      {/* ── HERO ──
+          Original H1: "Estudiaste meses. ¿Estás listo?" → Conservar, es el punto fuerte.
+          Original sub: muy largo, listaba demasiado. Reescrito más directo y escaneable. */}
       <section className="hero">
         <div className="hero-pattern"></div>
         <div className="hero-fade"></div>
         <div className="hero-inner">
           <div className="hero-badge">
             <div className="hero-dot"></div>
-            Preparación para el Examen Único de Residencias — Argentina
+            Examen Único de Residencias Médicas — Argentina
           </div>
           <h1 className="display">
             Estudiaste meses.<br />
             <span className="dim">¿Estás listo?</span>
           </h1>
           <p className="hero-sub">
-            Practicá con preguntas del nivel real del examen, medí tu avance por especialidad y llegá sabiendo con precisión dónde estás fuerte — y dónde todavía no.
+            Practicá con preguntas del nivel real, detectá en qué especialidades estás por debajo
+            y llegá al examen sabiendo exactamente qué reforzar.
           </p>
           <div className="hero-ctas">
-            <a href="#" onClick={go} className="cta-blue">Empezar gratis →</a>
-            <a href="#features" className="cta-outline">Ver cómo funciona</a>
+            <a href="#" onClick={go} className="cta-blue">Empezar ahora →</a>
+            <a href="#features" className="cta-outline">Ver qué incluye</a>
           </div>
         </div>
       </section>
 
+      {/* ── STATS STRIP ──
+          Original: mezcla inconsistente de números y verbos sueltos ("Sabés", "No olvidás").
+          Mejora: coherencia visual y semántica; cada ítem comunica un beneficio completo. */}
       <div className="stats-strip">
         <div className="stats-in">
           <div className="stat-item">
@@ -117,13 +128,13 @@ export default function Landing() {
           </div>
           <div className="stat-div"></div>
           <div className="stat-item">
-            <div className="stat-num stat-num--sm">Sabés</div>
-            <div className="stat-label">exactamente dónde estás parado</div>
+            <div className="stat-num stat-num--sm">Rendimiento</div>
+            <div className="stat-label">real por especialidad, no global</div>
           </div>
           <div className="stat-div"></div>
           <div className="stat-item">
-            <div className="stat-num stat-num--sm">No olvidás</div>
-            <div className="stat-label">lo que ya estudiaste</div>
+            <div className="stat-num stat-num--sm">Repaso</div>
+            <div className="stat-label">automático antes de que se olvide</div>
           </div>
           <div className="stat-div"></div>
           <div className="stat-item">
@@ -133,18 +144,19 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* ESPECIALIDADES */}
+      {/* ── ESPECIALIDADES ──
+          Original título: "Creciendo con cada especialidad." → orientado al producto, no al usuario.
+          Mejora: más orientado a qué cubre, qué sirve, qué crece. */}
       <section className="esp-sec" id="especialidades">
         <div className="esp-in">
           <div className="esp-header">
             <div className="esp-header-left">
-              <div className="eyebrow">Contenido cubierto</div>
-              <h2>Creciendo con<br />cada especialidad.</h2>
+              <div className="eyebrow">Especialidades disponibles</div>
+              <h2>El contenido que<br />el examen toma.</h2>
             </div>
-            <p>El banco de preguntas se amplía continuamente. Todo basado en fuentes oficiales y auditadas, al nivel del examen real.</p>
+            <p>El banco de preguntas crece continuamente. Cada pregunta refleja el nivel y el formato del examen real, con fuente oficial en la explicación.</p>
           </div>
 
-          {/* Ticker animado */}
           <div className="esp-ticker-wrap">
             <div className="esp-ticker-stage" ref={tickerRef}>
               {ESPECIALIDADES.map((esp) => (
@@ -159,19 +171,18 @@ export default function Landing() {
                 </div>
               ))}
             </div>
-            <div className="esp-pill-list">
-              {ESPECIALIDADES.map((esp) => (
-                <div className="esp-pill" key={esp}>{esp}</div>
-              ))}
-            </div>
+
           </div>
 
+          {/* ── BIBLIO BANNER ──
+              Original: repetía "fuentes oficiales y auditadas" (ya estaba en el título).
+              Mejora: foco en el beneficio concreto para el usuario que está estudiando. */}
           <div className="biblio-banner">
             <div className="bb-left">
               <div className="bb-icon-svg"><IconBook /></div>
               <div>
-                <div className="bb-title">Fuentes oficiales y auditadas en cada pregunta</div>
-                <div className="bb-desc">Cada explicación cita su fuente. No memorizás respuestas — entendés el razonamiento detrás de cada opción.</div>
+                <div className="bb-title">Cada respuesta cita su fuente</div>
+                <div className="bb-desc">No memorizás opciones — entendés por qué cada una es correcta o incorrecta. Eso es lo que pide el examen real.</div>
               </div>
             </div>
             <div className="bb-books">
@@ -183,20 +194,25 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* BENTO */}
+      {/* ── BENTO FEATURES ── */}
       <section className="sec" id="features">
         <div className="sec-in">
+          {/* Original eyebrow: "Qué hace ResidenciasApp" → descriptivo de producto.
+              Original h2: "Practicá. Medí. Mejorá." → bueno pero abstracto para subtítulo.
+              Mejora: eyebrow más funcional, h2 conservado, subtítulo más concreto. */}
           <div className="sec-header">
-            <div className="eyebrow">Qué hace ResidenciasApp</div>
-            <h2>Practicá.<br />Medí. Mejorá.</h2>
-            <p className="sec-desc">Cada herramienta tiene un objetivo concreto: que llegues al examen sabiendo exactamente en qué estás parado.</p>
+            <div className="eyebrow">Herramientas</div>
+            <h2>Practicá. Medí. Mejorá.</h2>
+            <p className="sec-desc">Cuatro funciones diseñadas para darte claridad sobre tu preparación, no solo práctica.</p>
           </div>
           <div className="bento">
             <div className="bento-fade"></div>
 
+            {/* Card Práctica:
+                Original: bien orientado a feature. Mejora: agrega el beneficio del feedback. */}
             <div className="b-card span2">
-              <h3>Práctica por especialidad</h3>
-              <p>Elegís la especialidad y el subtema. Casos clínicos del nivel real del examen, con feedback inmediato y fuente en cada explicación.</p>
+              <h3>Práctica por especialidad y subtema</h3>
+              <p>Elegís especialidad y subtema, respondés casos clínicos del nivel real y recibís explicación con fuente en cada opción — correcta e incorrecta.</p>
               <div className="mini-q">
                 <div className="mini-q-text">
                   Mujer 45 años, HTA refractaria a 3 fármacos. Hipokalemia espontánea, aldosterona elevada, renina suprimida.<br /><br />
@@ -209,9 +225,12 @@ export default function Landing() {
               </div>
             </div>
 
+            {/* Card Dashboard:
+                Original: "Sin estimaciones — datos concretos." → vago. Qué datos, para qué.
+                Mejora: especifica qué información y qué decisión habilita. */}
             <div className="b-card dark">
-              <h3>Seguimiento real por especialidad</h3>
-              <p>Tu porcentaje de aciertos actualizado después de cada sesión. Sin estimaciones — datos concretos.</p>
+              <h3>Tu porcentaje real por especialidad</h3>
+              <p>Actualizado en cada sesión. Ves de un vistazo qué especialidades superan tu meta y cuáles necesitan trabajo.</p>
               <div className="bar-list">
                 {[
                   { name: 'Ginecología', pct: 84, color: '#4ade80' },
@@ -232,9 +251,12 @@ export default function Landing() {
               </div>
             </div>
 
+            {/* Card Racha:
+                Original: "El hábito hace la diferencia / Pocos minutos diarios..." → motivacional genérico.
+                Mejora: más concreto, orientado a lo que registra el sistema. */}
             <div className="b-card dark">
-              <h3>El hábito hace la diferencia</h3>
-              <p>Pocos minutos diarios rinden más que una maratón semanal.</p>
+              <h3>Constancia que se mide</h3>
+              <p>El sistema registra tu actividad diaria. Sesiones cortas y regulares consolidan más que un estudio intensivo esporádico.</p>
               <div className="streak-big">7</div>
               <div className="streak-lbl">días seguidos</div>
               <div className="streak-dots">
@@ -244,6 +266,7 @@ export default function Landing() {
               </div>
             </div>
 
+            {/* Card Explicaciones: el copy actual es excelente, se conserva. */}
             <div className="b-card span2">
               <h3>Explicaciones que enseñan, no que confirman</h3>
               <p>No solo la correcta. Cada opción tiene su propia explicación con fuente oficial — entendés por qué cada distractor es incorrecto.</p>
@@ -265,9 +288,12 @@ export default function Landing() {
               </div>
             </div>
 
+            {/* Card Repaso:
+                Original: "El sistema detecta..." → pasivo y vago sobre cuándo actúa.
+                Mejora: concreto en el criterio (2 semanas) y en la acción. */}
             <div className="b-card">
               <h3>Repasá antes de olvidar</h3>
-              <p>El sistema detecta qué temas no tocás hace tiempo y te arma una sesión de repaso rápido.</p>
+              <p>Si no tocás una especialidad en más de 2 semanas, el sistema lo detecta y te propone una sesión corta de repaso.</p>
               <div className="repaso-list">
                 <div className="r-row">
                   <span className="r-name">Infectología</span>
@@ -288,46 +314,56 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CÓMO FUNCIONA */}
+      {/* ── CÓMO FUNCIONA ──
+          Original: muy bien estructurado. Ajustes menores de concisión y especificidad. */}
       <section className="dark-sec" id="como">
         <div className="sec-in">
           <div className="sec-header">
-            <div className="eyebrow eyebrow-dark">El proceso</div>
+            <div className="eyebrow eyebrow-dark">Cómo funciona</div>
             <h2 className="h2-white">Empezás en minutos.<br />Los resultados se ven en días.</h2>
             <p className="sec-desc-dark">Sin configuraciones complejas. Sin curva de aprendizaje.</p>
           </div>
           <div className="steps-grid">
+
+            {/* Paso 1: muy bueno en el original. Ajuste mínimo. */}
             <div className="step-cell">
               <div className="step-num-label">Paso 01</div>
               <h3>Marcás lo que ya estudiaste</h3>
-              <p>Tildás las especialidades que ya viste. ResidenciasApp solo te pregunta sobre lo que sabés. No tiene sentido practicar lo que todavía no estudiaste.</p>
+              <p>Tildás las especialidades que ya viste. El sistema solo te pregunta sobre lo que estudiaste — no tiene sentido practicar lo que todavía no viste.</p>
             </div>
+
+            {/* Paso 2: "a tu ritmo" era vago. Reemplazado por acción concreta. */}
             <div className="step-cell">
               <div className="step-num-label">Paso 02</div>
-              <h3>Practicás o simulás a tu ritmo</h3>
-              <p>Práctica libre por especialidad y subtema, o simulacro cronometrado. Tu seguimiento se actualiza automáticamente después de cada sesión.</p>
+              <h3>Practicás por tema o hacés un simulacro</h3>
+              <p>Práctica libre por especialidad y subtema, o simulacro con timer y distribución proporcional. El seguimiento se actualiza solo al terminar.</p>
             </div>
+
+            {/* Paso 3: excelente en el original. Ajuste mínimo de fluidez. */}
             <div className="step-cell">
               <div className="step-num-label">Paso 03</div>
-              <h3>Reforzás donde más importa</h3>
-              <p>Ves qué especialidades están por debajo de tu meta y cuáles no repasás hace tiempo. Datos precisos para decidir dónde dedicar la próxima hora de estudio.</p>
+              <h3>Sabés exactamente dónde reforzar</h3>
+              <p>Ves qué especialidades están debajo de tu meta y cuáles no repasás hace tiempo. Así sabés dónde invertir las próximas horas de estudio.</p>
             </div>
+
           </div>
         </div>
       </section>
 
-      {/* SIMULACRO */}
+      {/* ── SIMULACRO ──
+          Original párrafo intro: bien pero repetía ideas del título.
+          Mejora: más específico en el mecanismo, sin repetir "proporcional" dos veces. */}
       <section className="sim-sec">
         <div className="sim-grid">
           <div className="sim-text">
-            <div className="eyebrow">El simulacro inteligente</div>
-            <h2>Configurás una vez.<br />Funciona solo.</h2>
-            <p>Seleccionás los temas que ya estudiaste y el sistema arma un examen proporcional. Con o sin timer. Sin preguntas vistas recientemente.</p>
+            <div className="eyebrow">Modo simulacro</div>
+            <h2>Un examen que<br />se adapta a vos.</h2>
+            <p>Seleccionás tus temas activos y el sistema arma un examen con el formato real: distribución por peso de especialidad, timer de 1.5 min por pregunta y sin repetir lo que ya respondiste en los últimos 5 días.</p>
             {[
-              { Icon: IconScale,   title: 'Distribución proporcional',  desc: 'Las preguntas se reparten según el peso real de cada especialidad en el examen.' },
-              { Icon: IconRefresh, title: 'Sin repeticiones recientes',  desc: 'No ves la misma pregunta hasta que pasen al menos 5 días.' },
-              { Icon: IconTimer,   title: 'Timer configurable',          desc: '1.5 minutos por pregunta, el mismo ritmo que el examen real.' },
-              { Icon: IconChart,   title: 'Resultado por especialidad',  desc: 'Al terminar sabés exactamente dónde estuviste bien y dónde no.' },
+              { Icon: IconScale,   title: 'Distribución según el examen real',  desc: 'Las preguntas se reparten en la misma proporción que en el Examen Único.' },
+              { Icon: IconRefresh, title: 'Sin repeticiones recientes',          desc: 'No ves la misma pregunta hasta que pasen al menos 5 días.' },
+              { Icon: IconTimer,   title: 'Timer de 1.5 minutos por pregunta',  desc: 'El mismo ritmo que el examen real. Practicás la velocidad, no solo el contenido.' },
+              { Icon: IconChart,   title: 'Resultado desglosado por especialidad', desc: 'Al terminar sabés exactamente dónde estuviste bien y dónde no.' },
             ].map(({ Icon, title, desc }) => (
               <div className="feat-item" key={title}>
                 <div className="fi-icon-svg"><Icon /></div>
@@ -367,12 +403,13 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CTA FINAL */}
+      {/* ── CTA FINAL ──
+          Original: excelente. Se conserva intacto — es el mejor copy de la landing. */}
       <section className="cta-sec">
         <div className="cta-inner">
           <h2>No reemplaza tu curso.<br /><em>Lo hace más efectivo.</em></h2>
           <div className="cta-r">
-            <a href="#" onClick={go} className="cta-btn">Empezar gratis →</a>
+            <a href="#" onClick={go} className="cta-btn">Empezar ahora →</a>
           </div>
         </div>
       </section>

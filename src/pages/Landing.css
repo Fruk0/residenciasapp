@@ -130,7 +130,7 @@
 .lw .bb-book { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 6px 12px; font-size: 12px; color: rgba(255,255,255,.65); font-weight: 500; }
 
 /* ── SECTIONS ── */
-.lw .sec { padding: 96px 5%; }
+.lw .sec { padding: 18px 5% 96px; }
 .lw .sec-in { max-width: 1200px; margin: 0 auto; }
 .lw .sec-header { text-align: center; margin-bottom: 64px; }
 .lw .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--blue); margin-bottom: 14px; }
@@ -189,7 +189,7 @@
 .lw .r-name { color: var(--black); font-weight: 500; }
 
 /* ── DARK SEC ── */
-.lw .dark-sec { background: var(--dark); padding: 96px 5%; }
+.lw .dark-sec { background: var(--dark); padding: 48px 5% 96px;}
 .lw .eyebrow-dark { color: rgba(139,128,255,.9); }
 .lw .h2-white { color: #fff; }
 .lw .sec-desc-dark { font-size: 16px; color: rgba(255,255,255,.38); max-width: 500px; margin: 0 auto; line-height: 1.7; }
