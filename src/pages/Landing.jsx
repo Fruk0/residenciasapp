@@ -103,12 +103,11 @@ export default function Landing() {
             Examen Único de Residencias Médicas — Argentina
           </div>
           <h1 className="display">
-            Estudiaste meses.<br />
+            Paraparate de forma inteligente.<br />
             <span className="dim">¿Estás listo?</span>
           </h1>
           <p className="hero-sub">
-            Practicá con preguntas del nivel real, detectá en qué especialidades estás por debajo
-            y llegá al examen sabiendo exactamente qué reforzar.
+            Practicá con preguntas del nivel real, medí tu rendimiento por especialidad y enfocá tu estudio donde más lo necesitás.
           </p>
           <div className="hero-ctas">
             <a href="#" onClick={go} className="cta-blue">Empezar ahora →</a>
